@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Http\Livewire\Organization;
+
+use App\Actions\Organization\SwitchOrganization;
+use App\Models\Organization;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
+
+class OrganizationSwitcher extends Component
+{
+    public ?int $currentOrganizationId = null;
+
+    protected $listeners = ['organization-created' => '$refresh'];
+
+    public function mount(): void
+    {
+        $this->currentOrganizationId = SwitchOrganization::current(Auth::user())?->id;
+    }
+
+    public function organizations(): Collection
+    {
+        return Auth::user()->organizations()
+            ->wherePivot('membership_status', 'active')
+            ->get();
+    }
+
+    public function currentOrganization(): ?Organization
+    {
+        return SwitchOrganization::current(Auth::user());
+    }
+
+    public function switchTo(int $organizationId): void
+    {
+        $organization = Organization::findOrFail($organizationId);
+        $user = Auth::user();
+
+        (new SwitchOrganization)->handle($user, $organization);
+
+        $this->currentOrganizationId = $organization->id;
+
+        $this->dispatch('organization-switched', $organization->id);
+    }
+
+    public function render()
+    {
+        return view('livewire.organization.organization-switcher');
+    }
+}

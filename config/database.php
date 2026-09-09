@@ -113,6 +113,21 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        'pgsql_testing' => [
+            'driver' => 'pgsql',
+            'url' => env('TEST_DATABASE_URL'),
+            'host' => env('TEST_DB_HOST', env('DB_HOST_TEST', '127.0.0.1')),
+            'port' => env('TEST_DB_PORT', env('DB_PORT', '5432')),
+            'database' => env('TEST_DB_DATABASE', env('DB_DATABASE', 'laravel')),
+            'username' => env('TEST_DB_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('TEST_DB_PASSWORD', env('DB_HOST_TEST_PASSWORD', '')),
+            'charset' => env('TEST_DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('TEST_DB_SSLMODE', env('DB_SSLMODE', 'prefer')),
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),
