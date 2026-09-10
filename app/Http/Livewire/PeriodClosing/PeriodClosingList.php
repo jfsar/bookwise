@@ -6,14 +6,18 @@ use App\Actions\Organization\SwitchOrganization;
 use App\Models\AccountingPeriod;
 use App\Models\FiscalYear;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class PeriodClosingList extends Component
 {
     public ?int $selectedFiscalYearId = null;
 
-    protected $listeners = ['period-updated' => '$refresh'];
+    #[On('period-updated')]
+    public function refresh(): void {}
 
+    #[Computed]
     public function fiscalYears()
     {
         $organization = SwitchOrganization::current(Auth::user());
@@ -21,6 +25,7 @@ class PeriodClosingList extends Component
         return $organization ? FiscalYear::forOrganization($organization)->get() : collect();
     }
 
+    #[Computed]
     public function periods()
     {
         $organization = SwitchOrganization::current(Auth::user());

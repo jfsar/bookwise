@@ -6,6 +6,8 @@ use App\Actions\Organization\SwitchOrganization;
 use App\Models\JournalEntry;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -17,8 +19,20 @@ class JournalEntryList extends Component
 
     public string $status = '';
 
-    protected $listeners = ['entry-created' => '$refresh'];
+    #[On('entry-created')]
+    public function refresh(): void {}
 
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStatus(): void
+    {
+        $this->resetPage();
+    }
+
+    #[Computed]
     public function entries(): LengthAwarePaginator
     {
         $organization = SwitchOrganization::current(Auth::user());

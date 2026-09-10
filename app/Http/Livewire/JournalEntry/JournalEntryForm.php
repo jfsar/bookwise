@@ -10,6 +10,7 @@ use App\Models\Currency;
 use App\Models\FiscalYear;
 use App\Models\Journal;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class JournalEntryForm extends Component
@@ -150,26 +151,30 @@ class JournalEntryForm extends Component
         $this->resetValidation();
     }
 
-    public function getJournalsProperty()
+    #[Computed]
+    public function journals()
     {
         $organization = SwitchOrganization::current(Auth::user());
 
         return $organization ? Journal::forOrganization($organization)->active()->get() : collect();
     }
 
-    public function getCurrenciesProperty()
+    #[Computed]
+    public function currencies()
     {
         return Currency::all();
     }
 
-    public function getFiscalYearsProperty()
+    #[Computed]
+    public function fiscalYears()
     {
         $organization = SwitchOrganization::current(Auth::user());
 
         return $organization ? FiscalYear::forOrganization($organization)->open()->get() : collect();
     }
 
-    public function getAccountsProperty()
+    #[Computed]
+    public function accounts()
     {
         $organization = SwitchOrganization::current(Auth::user());
 
@@ -179,9 +184,12 @@ class JournalEntryForm extends Component
     public function updatedFiscalYearId(): void
     {
         $this->accountingPeriodId = null;
+
+        unset($this->periods);
     }
 
-    public function getPeriodsProperty()
+    #[Computed]
+    public function periods()
     {
         if (! $this->fiscalYearId) {
             return collect();

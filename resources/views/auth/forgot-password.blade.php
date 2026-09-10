@@ -1,10 +1,10 @@
-<x-layouts.guest>
-    <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+<x-layouts::guest>
+    <div class="mb-4 text-sm text-on-surface-muted dark:text-on-surface-muted">
         {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link.') }}
     </div>
 
     @if (session('status'))
-        <div class="font-medium text-sm text-green-600 dark:text-green-400">
+        <div class="font-medium text-sm text-success dark:text-success">
             {{ session('status') }}
         </div>
     @endif
@@ -24,4 +24,4 @@
             </x-primary-button>
         </div>
     </form>
-</x-layouts.guest>
+</x-layouts::guest>

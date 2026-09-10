@@ -8,6 +8,8 @@ use App\Models\AccountType;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -23,7 +25,9 @@ class AccountList extends Component
 
     public bool $showInactive = false;
 
-    protected $listeners = ['account-created' => '$refresh', 'account-updated' => '$refresh'];
+    #[On('account-created')]
+    #[On('account-updated')]
+    public function refresh(): void {}
 
     public function updatedSearch(): void
     {
@@ -46,6 +50,7 @@ class AccountList extends Component
         $this->resetPage();
     }
 
+    #[Computed]
     public function accounts(): LengthAwarePaginator
     {
         $organization = SwitchOrganization::current(Auth::user());
@@ -80,6 +85,7 @@ class AccountList extends Component
         return $query->paginate(25);
     }
 
+    #[Computed]
     public function accountTypes(): Collection
     {
         return AccountType::orderBy('sort_order')->get();

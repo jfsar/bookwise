@@ -7,21 +7,21 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles
     </head>
-    <body class="font-sans antialiased bg-gray-100 dark:bg-gray-900">
-        <nav class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+    <body class="font-sans antialiased bg-surface dark:bg-surface text-on-surface dark:text-on-surface">
+        <nav class="bg-surface-lowest/80 dark:bg-surface-lowest/80 backdrop-blur-xl">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
                     <div class="flex items-center">
-                        <a href="{{ route('dashboard') }}" class="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                        <a href="{{ route('dashboard') }}" class="text-lg font-bold text-primary dark:text-primary font-display">
                             {{ config('app.name') }}
                         </a>
                     </div>
                     <div class="flex items-center gap-4">
                         @auth
-                            <span class="text-sm text-gray-600 dark:text-gray-400">{{ Auth::user()->name }}</span>
+                            <span class="text-sm text-on-surface-muted dark:text-on-surface-muted">{{ Auth::user()->name }}</span>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                                <button type="submit" class="text-sm text-on-surface-muted dark:text-on-surface-muted hover:text-on-surface dark:hover:text-on-surface transition">
                                     Logout
                                 </button>
                             </form>
@@ -32,7 +32,7 @@
         </nav>
 
         @if (isset($header))
-            <header class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+            <header class="bg-surface-low dark:bg-surface-low">
                 <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                     {{ $header }}
                 </div>

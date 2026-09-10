@@ -69,7 +69,7 @@ return [
     */
 
     'make_command' => [
-        'type' => 'sfc', // Options: 'sfc', 'mfc', 'class'
+        'type' => 'class', // Options: 'sfc', 'mfc', 'class'
         'emoji' => true, // Options: true, false
         'with' => [
             'js' => false,
@@ -102,7 +102,7 @@ return [
     |
     */
 
-    'class_path' => app_path('Livewire'),
+    'class_path' => app_path('Http/Livewire'),
 
     /*
     |---------------------------------------------------------------------------

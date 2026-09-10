@@ -12,6 +12,8 @@ class ClosePeriodForm extends Component
 {
     public int $periodId;
 
+    public ?AccountingPeriod $period = null;
+
     public string $reason = '';
 
     public bool $showForm = false;
@@ -19,6 +21,7 @@ class ClosePeriodForm extends Component
     public function mount(int $periodId): void
     {
         $this->periodId = $periodId;
+        $this->period = AccountingPeriod::find($periodId);
     }
 
     protected array $rules = [
@@ -35,11 +38,10 @@ class ClosePeriodForm extends Component
 
     public function closePeriod(ClosePeriod $closePeriod): void
     {
-        $period = AccountingPeriod::findOrFail($this->periodId);
         $user = Auth::user();
 
         try {
-            $closePeriod->run($period, $user, $this->reason ?: null);
+            $closePeriod->run($this->period, $user, $this->reason ?: null);
             $this->showForm = false;
             $this->reason = '';
             $this->dispatch('period-updated');
@@ -53,11 +55,10 @@ class ClosePeriodForm extends Component
     {
         $this->validate();
 
-        $period = AccountingPeriod::findOrFail($this->periodId);
         $user = Auth::user();
 
         try {
-            $reopenPeriod->run($period, $user, $this->reason);
+            $reopenPeriod->run($this->period, $user, $this->reason);
             $this->showForm = false;
             $this->reason = '';
             $this->dispatch('period-updated');

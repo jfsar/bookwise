@@ -1,4 +1,4 @@
-<x-layouts.guest>
+<x-layouts::guest>
     <form method="POST" action="{{ route('password.update') }}">
         @csrf
 
@@ -28,4 +28,4 @@
             </x-primary-button>
         </div>
     </form>
-</x-layouts.guest>
+</x-layouts::guest>

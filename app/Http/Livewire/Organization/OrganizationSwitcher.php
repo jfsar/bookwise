@@ -6,19 +6,23 @@ use App\Actions\Organization\SwitchOrganization;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class OrganizationSwitcher extends Component
 {
     public ?int $currentOrganizationId = null;
 
-    protected $listeners = ['organization-created' => '$refresh'];
+    #[On('organization-created')]
+    public function refresh(): void {}
 
     public function mount(): void
     {
         $this->currentOrganizationId = SwitchOrganization::current(Auth::user())?->id;
     }
 
+    #[Computed]
     public function organizations(): Collection
     {
         return Auth::user()->organizations()
@@ -26,6 +30,7 @@ class OrganizationSwitcher extends Component
             ->get();
     }
 
+    #[Computed]
     public function currentOrganization(): ?Organization
     {
         return SwitchOrganization::current(Auth::user());

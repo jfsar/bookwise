@@ -25,6 +25,8 @@ class JournalEntryActions extends Component
 
     public function submitEntry(SubmitJournalEntry $action): void
     {
+        $this->authorize('submit', $this->entry);
+
         try {
             $action->handle($this->entry, Auth::user());
             $this->dispatch('entry-updated');
@@ -36,6 +38,8 @@ class JournalEntryActions extends Component
 
     public function approveEntry(ApproveJournalEntry $action): void
     {
+        $this->authorize('approve', $this->entry);
+
         try {
             $action->handle($this->entry, Auth::user());
             $this->dispatch('entry-updated');
@@ -47,6 +51,8 @@ class JournalEntryActions extends Component
 
     public function postEntry(PostJournalEntry $action): void
     {
+        $this->authorize('post', $this->entry);
+
         try {
             $action->handle($this->entry, Auth::user());
             $this->dispatch('entry-updated');
@@ -58,6 +64,8 @@ class JournalEntryActions extends Component
 
     public function reverseEntry(ReverseJournalEntry $action): void
     {
+        $this->authorize('reverse', $this->entry);
+
         $this->validate(['reversalReason' => ['required', 'string', 'max:500']]);
 
         try {
@@ -73,6 +81,8 @@ class JournalEntryActions extends Component
 
     public function cancelEntry(CancelJournalEntry $action): void
     {
+        $this->authorize('cancel', $this->entry);
+
         $this->validate(['cancelReason' => ['required', 'string', 'max:500']]);
 
         try {

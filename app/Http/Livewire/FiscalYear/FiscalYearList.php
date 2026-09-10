@@ -7,6 +7,8 @@ use App\Models\FiscalYear;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -14,8 +16,10 @@ class FiscalYearList extends Component
 {
     use WithPagination;
 
-    protected $listeners = ['fiscal-year-created' => '$refresh'];
+    #[On('fiscal-year-created')]
+    public function refresh(): void {}
 
+    #[Computed]
     public function fiscalYears(): LengthAwarePaginator
     {
         $organization = SwitchOrganization::current(Auth::user());

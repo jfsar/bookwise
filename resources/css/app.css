@@ -1,9 +1,80 @@
+@custom-variant dark (&:where(.dark, .dark *));
+
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+
+    --color-surface: #f8f9ff;
+    --color-surface-low: #eff4ff;
+    --color-surface-container: #e5eeff;
+    --color-surface-highest: #d3e4fe;
+    --color-surface-lowest: #ffffff;
+
+    --color-on-surface: #0b1c30;
+    --color-on-surface-muted: #5a6b82;
+
+    --color-primary: #006d32;
+    --color-primary-light: #00d166;
+    --color-primary-container: #c8f5d8;
+    --color-on-primary: #ffffff;
+
+    --color-secondary: #1565c0;
+    --color-secondary-container: #d1e8ff;
+
+    --color-outline-variant: #bbcbb9;
+
+    --color-success: #16a34a;
+    --color-success-container: #dcfce7;
+    --color-warning: #d97706;
+    --color-warning-container: #fef3c7;
+    --color-error: #dc2626;
+    --color-error-container: #fee2e2;
+    --color-info: #0284c7;
+    --color-info-container: #e0f2fe;
+
+    --shadow-ambient-sm: 0 2px 16px 0 rgb(11 28 48 / 0.04);
+    --shadow-ambient-md: 0 4px 24px 0 rgb(11 28 48 / 0.06);
+    --shadow-ambient-lg: 0 8px 40px 0 rgb(11 28 48 / 0.08);
+
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-full: 9999px;
+}
+
+@theme dark {
+    --color-surface: #0e1420;
+    --color-surface-low: #141c2a;
+    --color-surface-container: #1a2436;
+    --color-surface-highest: #212d42;
+    --color-surface-lowest: #0a0f18;
+
+    --color-on-surface: #e2e8f0;
+    --color-on-surface-muted: #8899ad;
+
+    --color-primary: #34d67a;
+    --color-primary-light: #6ee7a8;
+    --color-primary-container: #0d3a1c;
+    --color-on-primary: #001a0a;
+
+    --color-secondary: #64b5f6;
+    --color-secondary-container: #0d2a4a;
+
+    --color-outline-variant: #2a3a4e;
+
+    --color-success: #4ade80;
+    --color-success-container: #14532d;
+    --color-warning: #fbbf24;
+    --color-warning-container: #78350f;
+    --color-error: #f87171;
+    --color-error-container: #7f1d1d;
+    --color-info: #38bdf8;
+    --color-info-container: #0c4a6e;
 }

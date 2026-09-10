@@ -9,6 +9,7 @@ use App\Models\Account;
 use App\Models\AccountType;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class AccountForm extends Component
@@ -65,11 +66,13 @@ class AccountForm extends Component
         }
     }
 
+    #[Computed]
     public function accountTypes(): Collection
     {
         return AccountType::orderBy('sort_order')->get();
     }
 
+    #[Computed]
     public function parentAccounts(): Collection
     {
         $organization = SwitchOrganization::current(Auth::user());
