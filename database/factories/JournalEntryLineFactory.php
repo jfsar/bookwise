@@ -21,9 +21,9 @@ class JournalEntryLineFactory extends Factory
         $amount = fake()->randomFloat(2, 100, 100000);
 
         return [
-            'organization_id' => Organization::factory(),
             'journal_entry_id' => JournalEntry::factory(),
-            'account_id' => Account::factory(),
+            'organization_id' => fn (array $attributes) => JournalEntry::find($attributes['journal_entry_id'])?->organization_id ?? Organization::factory(),
+            'account_id' => fn (array $attributes) => Account::factory()->create(['organization_id' => $attributes['organization_id']])->id,
             'line_number' => fake()->numberBetween(1, 10),
             'description' => fake()->optional()->sentence(),
             'debit' => $amount,

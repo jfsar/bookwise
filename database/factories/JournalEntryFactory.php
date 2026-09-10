@@ -24,10 +24,13 @@ class JournalEntryFactory extends Factory
         $year = fake()->year();
 
         return [
-            'organization_id' => Organization::factory(),
             'journal_id' => Journal::factory(),
-            'fiscal_year_id' => FiscalYear::factory(),
-            'accounting_period_id' => AccountingPeriod::factory(),
+            'organization_id' => fn (array $attributes) => Journal::find($attributes['journal_id'])?->organization_id ?? Organization::factory(),
+            'fiscal_year_id' => fn (array $attributes) => FiscalYear::factory()->create(['organization_id' => $attributes['organization_id']])->id,
+            'accounting_period_id' => fn (array $attributes) => AccountingPeriod::factory()->create([
+                'organization_id' => $attributes['organization_id'],
+                'fiscal_year_id' => $attributes['fiscal_year_id'],
+            ])->id,
             'entry_number' => strtoupper(fake()->bothify('??-####-######')),
             'entry_date' => fake()->dateTimeBetween("-{$year} years", 'now'),
             'description' => fake()->sentence(),

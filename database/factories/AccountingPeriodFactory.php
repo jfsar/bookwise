@@ -23,7 +23,7 @@ class AccountingPeriodFactory extends Factory
 
         return [
             'fiscal_year_id' => FiscalYear::factory(),
-            'organization_id' => Organization::factory(),
+            'organization_id' => fn (array $attributes) => FiscalYear::find($attributes['fiscal_year_id'])?->organization_id ?? Organization::factory(),
             'name' => Carbon::create()->month($month)->format('F').' '.$year,
             'period_number' => $month,
             'start_date' => Carbon::create($year, $month, 1),

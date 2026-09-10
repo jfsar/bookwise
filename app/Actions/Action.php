@@ -2,6 +2,8 @@
 
 namespace App\Actions;
 
+use Illuminate\Support\Facades\Validator;
+
 trait Action
 {
     /**
@@ -17,7 +19,7 @@ trait Action
      */
     public function run(array $data, mixed ...$args): mixed
     {
-        $validated = \Validator::make($data, $this->rules())->validate();
+        $validated = Validator::make($data, $this->rules())->validate();
 
         return $this->handle($validated, ...$args);
     }

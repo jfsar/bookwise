@@ -38,6 +38,10 @@ return new class extends Migration
                 ->references(['organization_id', 'id'])
                 ->on('bank_accounts')
                 ->restrictOnDelete();
+            $table->foreign(['organization_id', 'import_batch_id'], 'fk_bank_tx_org_import_batch')
+                ->references(['organization_id', 'id'])
+                ->on('bank_import_batches')
+                ->restrictOnDelete();
 
             $table->index(['organization_id', 'bank_account_id', 'transaction_date', 'id'], 'idx_bank_tx_org_account_date');
             $table->index(['organization_id', 'reconciliation_status'], 'idx_bank_tx_org_recon_status');

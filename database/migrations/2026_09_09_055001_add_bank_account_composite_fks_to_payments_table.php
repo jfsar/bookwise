@@ -6,37 +6,31 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('customer_payments', function (Blueprint $table) {
-            $table->foreign('bank_account_id')
-                ->references('id')
+            $table->foreign(['organization_id', 'bank_account_id'], 'fk_cust_pay_org_bank')
+                ->references(['organization_id', 'id'])
                 ->on('bank_accounts')
                 ->restrictOnDelete();
         });
 
         Schema::table('vendor_payments', function (Blueprint $table) {
-            $table->foreign('bank_account_id')
-                ->references('id')
+            $table->foreign(['organization_id', 'bank_account_id'], 'fk_vendor_pay_org_bank')
+                ->references(['organization_id', 'id'])
                 ->on('bank_accounts')
                 ->restrictOnDelete();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('customer_payments', function (Blueprint $table) {
-            $table->dropForeign(['bank_account_id']);
+            $table->dropForeign('fk_cust_pay_org_bank');
         });
 
         Schema::table('vendor_payments', function (Blueprint $table) {
-            $table->dropForeign(['bank_account_id']);
+            $table->dropForeign('fk_vendor_pay_org_bank');
         });
     }
 };

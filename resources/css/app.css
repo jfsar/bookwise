@@ -49,6 +49,10 @@
     --radius-full: 9999px;
 }
 
+[x-cloak] {
+    display: none !important;
+}
+
 @theme dark {
     --color-surface: #0e1420;
     --color-surface-low: #141c2a;

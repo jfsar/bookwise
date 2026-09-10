@@ -78,7 +78,7 @@ class AccountForm extends Component
         $organization = SwitchOrganization::current(Auth::user());
 
         if (! $organization) {
-            return collect();
+            return new Collection;
         }
 
         return Account::forOrganization($organization)

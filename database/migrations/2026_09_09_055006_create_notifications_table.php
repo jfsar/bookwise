@@ -16,9 +16,12 @@ return new class extends Migration
             $table->string('type');
             $table->morphs('notifiable');
             $table->text('data');
+            $table->foreignId('organization_id')->nullable()->constrained('organizations')->restrictOnDelete();
             $table->timestamp('read_at')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
+
+            $table->index(['organization_id'], 'idx_notifications_org');
         });
     }
 

@@ -30,6 +30,7 @@ return new class extends Migration
             $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $table->timestamps();
 
+            $table->unique(['organization_id', 'id']);
             $table->foreign(['organization_id', 'bank_account_id'])
                 ->references(['organization_id', 'id'])
                 ->on('bank_accounts')

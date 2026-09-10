@@ -28,6 +28,7 @@ return new class extends Migration
             $table->string('reference', 100)->nullable();
             $table->timestamps();
 
+            $table->unique(['organization_id', 'id'], 'uq_journal_entry_lines_org_id');
             $table->unique(['journal_entry_id', 'line_number']);
 
             $table->foreign(['organization_id', 'journal_entry_id'])
