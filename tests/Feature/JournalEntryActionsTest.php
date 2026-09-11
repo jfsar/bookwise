@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Actions\JournalEntry\CreateJournalEntry;
-use App\Http\Livewire\JournalEntry\JournalEntryActions;
 use App\Models\Account;
 use App\Models\AccountingPeriod;
 use App\Models\Currency;
@@ -14,7 +13,6 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Livewire;
 use Tests\TestCase;
 
 class JournalEntryActionsTest extends TestCase
@@ -71,9 +69,8 @@ class JournalEntryActionsTest extends TestCase
         $user->organizations()->attach($org->id, ['membership_status' => 'active']);
         $entry = $this->createDraftEntry($org, $user);
 
-        Livewire::actingAs($user)
-            ->test(JournalEntryActions::class, ['entry' => $entry])
-            ->call('submitEntry')
+        $this->actingAs($user)
+            ->post("/journal-entries/{$entry->id}/submit")
             ->assertForbidden();
     }
 
@@ -84,12 +81,85 @@ class JournalEntryActionsTest extends TestCase
         $this->attachRoleWithPermission($user, $org, 'submit-journal-entries');
         $entry = $this->createDraftEntry($org, $user);
 
-        Livewire::actingAs($user)
-            ->test(JournalEntryActions::class, ['entry' => $entry])
-            ->call('submitEntry')
-            ->assertDispatched('entry-updated')
-            ->assertStatus(200);
+        $this->actingAs($user)
+            ->post("/journal-entries/{$entry->id}/submit")
+            ->assertRedirect();
 
         $this->assertSame('submitted', $entry->fresh()->status->value);
+    }
+
+    public function test_http_store_creates_draft_entry(): void
+    {
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+        $user->organizations()->attach($org->id, ['membership_status' => 'active']);
+
+        $journal = Journal::factory()->create(['organization_id' => $org->id]);
+        $currency = Currency::factory()->create(['code' => 'USD']);
+        $fiscalYear = FiscalYear::factory()->create(['organization_id' => $org->id]);
+        $period = AccountingPeriod::factory()->create([
+            'organization_id' => $org->id,
+            'fiscal_year_id' => $fiscalYear->id,
+        ]);
+        $cash = Account::factory()->create(['organization_id' => $org->id]);
+        $revenue = Account::factory()->create(['organization_id' => $org->id]);
+
+        $this->actingAs($user)
+            ->post('/journal-entries', [
+                'journal_id' => $journal->id,
+                'currency_id' => $currency->id,
+                'fiscal_year_id' => $fiscalYear->id,
+                'accounting_period_id' => $period->id,
+                'entry_date' => now()->toDateString(),
+                'description' => 'HTTP entry',
+                'lines' => [
+                    ['account_id' => $cash->id, 'debit' => 250, 'credit' => 0, 'description' => null],
+                    ['account_id' => $revenue->id, 'debit' => 0, 'credit' => 250, 'description' => null],
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('journal_entries', [
+            'organization_id' => $org->id,
+            'description' => 'HTTP entry',
+            'status' => 'draft',
+        ]);
+    }
+
+    public function test_http_store_rejects_unbalanced_entry(): void
+    {
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+        $user->organizations()->attach($org->id, ['membership_status' => 'active']);
+
+        $journal = Journal::factory()->create(['organization_id' => $org->id]);
+        $currency = Currency::factory()->create(['code' => 'USD']);
+        $fiscalYear = FiscalYear::factory()->create(['organization_id' => $org->id]);
+        $period = AccountingPeriod::factory()->create([
+            'organization_id' => $org->id,
+            'fiscal_year_id' => $fiscalYear->id,
+        ]);
+        $cash = Account::factory()->create(['organization_id' => $org->id]);
+        $revenue = Account::factory()->create(['organization_id' => $org->id]);
+
+        $this->actingAs($user)
+            ->post('/journal-entries', [
+                'journal_id' => $journal->id,
+                'currency_id' => $currency->id,
+                'fiscal_year_id' => $fiscalYear->id,
+                'accounting_period_id' => $period->id,
+                'entry_date' => now()->toDateString(),
+                'description' => 'Unbalanced HTTP entry',
+                'lines' => [
+                    ['account_id' => $cash->id, 'debit' => 500, 'credit' => 0, 'description' => null],
+                    ['account_id' => $revenue->id, 'debit' => 0, 'credit' => 400, 'description' => null],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseMissing('journal_entries', [
+            'description' => 'Unbalanced HTTP entry',
+        ]);
     }
 }

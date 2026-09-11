@@ -1,14 +1,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @import 'tailwindcss';
-
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @theme {
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
 
     --color-surface: #f8f9ff;
     --color-surface-low: #eff4ff;
@@ -29,28 +29,26 @@
 
     --color-outline-variant: #bbcbb9;
 
-    --color-success: #16a34a;
+    --color-success: #166534;
     --color-success-container: #dcfce7;
-    --color-warning: #d97706;
+    --color-warning: #92400e;
     --color-warning-container: #fef3c7;
-    --color-error: #dc2626;
+    --color-error: #b91c1c;
     --color-error-container: #fee2e2;
-    --color-info: #0284c7;
+    --color-info: #075985;
     --color-info-container: #e0f2fe;
 
     --shadow-ambient-sm: 0 2px 16px 0 rgb(11 28 48 / 0.04);
     --shadow-ambient-md: 0 4px 24px 0 rgb(11 28 48 / 0.06);
     --shadow-ambient-lg: 0 8px 40px 0 rgb(11 28 48 / 0.08);
 
+    --animate-rise: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+
     --radius-sm: 0.375rem;
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
     --radius-full: 9999px;
-}
-
-[x-cloak] {
-    display: none !important;
 }
 
 @theme dark {
@@ -77,8 +75,153 @@
     --color-success-container: #14532d;
     --color-warning: #fbbf24;
     --color-warning-container: #78350f;
-    --color-error: #f87171;
+    --color-error: #fca5a5;
     --color-error-container: #7f1d1d;
-    --color-info: #38bdf8;
+    --color-info: #7dd3fc;
     --color-info-container: #0c4a6e;
+}
+
+@theme inline {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    --background: #f8f9ff;
+    --foreground: #0b1c30;
+    --card: #ffffff;
+    --card-foreground: #0b1c30;
+    --popover: #ffffff;
+    --popover-foreground: #0b1c30;
+    --primary: #006d32;
+    --primary-foreground: #ffffff;
+    --secondary: #e5eeff;
+    --secondary-foreground: #0b1c30;
+    --muted: #eff4ff;
+    --muted-foreground: #5a6b82;
+    --accent: #e5eeff;
+    --accent-foreground: #0b1c30;
+    --destructive: #b91c1c;
+    --border: color-mix(in srgb, #bbcbb9 45%, transparent);
+    --input: color-mix(in srgb, #bbcbb9 35%, transparent);
+    --ring: #006d32;
+    --chart-1: #006d32;
+    --chart-2: #1565c0;
+    --chart-3: #d97706;
+    --chart-4: #0284c7;
+    --chart-5: #16a34a;
+    --radius: 0.75rem;
+    --sidebar: #eff4ff;
+    --sidebar-foreground: #0b1c30;
+    --sidebar-primary: #006d32;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e5eeff;
+    --sidebar-accent-foreground: #0b1c30;
+    --sidebar-border: color-mix(in srgb, #bbcbb9 45%, transparent);
+    --sidebar-ring: #006d32;
+}
+
+.dark {
+    --background: #0e1420;
+    --foreground: #e2e8f0;
+    --card: #0a0f18;
+    --card-foreground: #e2e8f0;
+    --popover: #0a0f18;
+    --popover-foreground: #e2e8f0;
+    --primary: #34d67a;
+    --primary-foreground: #001a0a;
+    --secondary: #1a2436;
+    --secondary-foreground: #e2e8f0;
+    --muted: #141c2a;
+    --muted-foreground: #8899ad;
+    --accent: #1a2436;
+    --accent-foreground: #e2e8f0;
+    --destructive: #fca5a5;
+    --border: color-mix(in srgb, #2a3a4e 60%, transparent);
+    --input: color-mix(in srgb, #2a3a4e 50%, transparent);
+    --ring: #34d67a;
+    --chart-1: #34d67a;
+    --chart-2: #64b5f6;
+    --chart-3: #fbbf24;
+    --chart-4: #38bdf8;
+    --chart-5: #4ade80;
+    --sidebar: #141c2a;
+    --sidebar-foreground: #e2e8f0;
+    --sidebar-primary: #34d67a;
+    --sidebar-primary-foreground: #001a0a;
+    --sidebar-accent: #1a2436;
+    --sidebar-accent-foreground: #e2e8f0;
+    --sidebar-border: color-mix(in srgb, #2a3a4e 60%, transparent);
+    --sidebar-ring: #34d67a;
+}
+
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@layer components {
+    .page-grain {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+        background-repeat: repeat;
+        background-size: 240px 240px;
+        background-blend-mode: overlay;
+    }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  html {
+    @apply font-sans;
+    }
 }

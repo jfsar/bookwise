@@ -6,10 +6,11 @@ Before planning or editing, find the row whose globs match the file's path and r
 | --- | --- |
 | app/Actions/** | .ai/rules/actions.md |
 | app/** | .ai/rules/app.md |
+| resources/js/Components/**, resources/js/Pages/** | .ai/rules/components.md |
 | resources/css/** | .ai/rules/css.md |
 | tests/Feature/** | .ai/rules/feature.md |
 | phpunit.xml, **/*.php | .ai/rules/general.md |
 | database/migrations/** | .ai/rules/migrations.md |
 | app/Models/**, app/Models/*.php | .ai/rules/models.md |
 | app/Policies/** | .ai/rules/policies.md |
-| resources/views/** | .ai/rules/views.md |
+| resources/views/**, resources/js/** | .ai/rules/views.md |
