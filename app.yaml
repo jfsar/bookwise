@@ -1,0 +1,78 @@
+kind: wasmer.io/App.v0
+name: bookwise
+package: .
+
+scaling:
+  mode: single_concurrency
+
+capabilities:
+  instaboot:
+    requests:
+      - path: /
+
+env:
+  # ── App ──────────────────────────────────────────────────────
+  APP_NAME: "BookWise"
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  APP_URL: "" # set to https://bookwise.<your-username>.wasmer.app after first deploy
+  APP_LOCALE: "en"
+  APP_FALLBACK_LOCALE: "en"
+  APP_MAINTENANCE_DRIVER: "file"
+  BCRYPT_ROUNDS: "12"
+
+  # ── Logging ──────────────────────────────────────────────────
+  LOG_CHANNEL: "stack"
+  LOG_STACK: "single"
+  LOG_DEPRECATIONS_CHANNEL: "null"
+  LOG_LEVEL: "warning"
+
+  # ── Database (Neon PostgreSQL) ───────────────────────────────
+  DB_CONNECTION: "pgsql"
+  DB_HOST: "" # Neon pooler host
+  DB_PORT: "5432"
+  DB_DATABASE: "neondb"
+  DB_USERNAME: "" # Neon username
+  DB_PASSWORD: "" # Neon password
+  DB_SSLMODE: "require"
+
+  # ── Session ──────────────────────────────────────────────────
+  SESSION_DRIVER: "database"
+  SESSION_LIFETIME: "120"
+  SESSION_ENCRYPT: "false"
+  SESSION_PATH: "/"
+  SESSION_DOMAIN: "null"
+  SESSION_SECURE_COOKIE: "true"
+
+  # ── Cache & Queue (Upstash Redis) ───────────────────────────
+  CACHE_STORE: "redis"
+  REDIS_CACHE_DB: "0"
+  QUEUE_CONNECTION: "redis"
+  REDIS_CLIENT: "phpredis"
+  REDIS_HOST: "" # Upstash Redis endpoint (include tls:// prefix)
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: "" # Upstash Redis password
+
+  # ── Broadcasting ─────────────────────────────────────────────
+  BROADCAST_CONNECTION: "log"
+
+  # ── Filesystem (Cloudflare R2) ──────────────────────────────
+  FILESYSTEM_DISK: "s3"
+  AWS_BUCKET: "" # R2 bucket name
+  AWS_ACCESS_KEY_ID: "" # R2 API token Access Key ID
+  AWS_SECRET_ACCESS_KEY: "" # R2 API token Secret Access Key
+  AWS_DEFAULT_REGION: "auto"
+  AWS_ENDPOINT: "" # R2 endpoint URL
+  AWS_USE_PATH_STYLE_ENDPOINT: "true"
+
+  # ── Mail (Mailtrap SMTP) ────────────────────────────────────
+  MAIL_MAILER: "smtp"
+  MAIL_HOST: "sandbox.smtp.mailtrap.io"
+  MAIL_PORT: "2525"
+  MAIL_USERNAME: ""
+  MAIL_PASSWORD: ""
+  MAIL_FROM_ADDRESS: "book_wise@example.com"
+  MAIL_FROM_NAME: "BookWise"
+
+  # ── Vite ─────────────────────────────────────────────────────
+  VITE_APP_NAME: "BookWise"

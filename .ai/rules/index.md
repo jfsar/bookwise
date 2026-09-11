@@ -7,6 +7,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Actions/** | .ai/rules/actions.md |
 | app/** | .ai/rules/app.md |
 | resources/js/Components/**, resources/js/Pages/** | .ai/rules/components.md |
+| config/database.php | .ai/rules/config.md |
 | resources/css/** | .ai/rules/css.md |
 | tests/Feature/** | .ai/rules/feature.md |
 | phpunit.xml, **/*.php | .ai/rules/general.md |
