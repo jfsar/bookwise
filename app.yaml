@@ -37,11 +37,11 @@ env:
 
   # ── Database (Neon PostgreSQL) ───────────────────────────────
   DB_CONNECTION: "pgsql"
-  DB_HOST: "ep-small-smoke-b342x1re-pooler.c-4.ap-southeast-1.aws.neon.tech" # Neon pooler host
+  DB_HOST: "" # Neon pooler host
   DB_PORT: "5432"
   DB_DATABASE: "neondb"
-  DB_USERNAME: "neondb_owner" # Neon username
-  DB_PASSWORD: "npg_dKSg54jsbEDw" # Neon password
+  DB_USERNAME: "" # Neon username
+  DB_PASSWORD: "" # Neon password
   DB_SSLMODE: "require"
 
   # ── Session ──────────────────────────────────────────────────
@@ -57,28 +57,28 @@ env:
   REDIS_CACHE_DB: "0"
   QUEUE_CONNECTION: "redis"
   REDIS_CLIENT: "phpredis"
-  REDIS_HOST: "tls://finer-alien-97756.upstash.io" # Upstash Redis endpoint (include tls:// prefix)
+  REDIS_HOST: "" # Upstash Redis endpoint (include tls:// prefix)
   REDIS_PORT: "6379"
-  REDIS_PASSWORD: "gQAAAAAAAX3cAAIgcDIzYzU1YzhkZGNiODc0ZjY1YjRjODI5N2VjYjZhMGYwZA" # Upstash Redis password
+  REDIS_PASSWORD: "" # Upstash Redis password
 
   # ── Broadcasting ─────────────────────────────────────────────
   BROADCAST_CONNECTION: "log"
 
   # ── Filesystem (Cloudflare R2) ──────────────────────────────
   FILESYSTEM_DISK: "s3"
-  AWS_BUCKET: "hardware" # R2 bucket name
-  AWS_ACCESS_KEY_ID: "9ec2c146ebd28a9151a0362e3be2dd53" # R2 API token Access Key ID
-  AWS_SECRET_ACCESS_KEY: "ce69fa4293124055f1ac31f427f42227e323fe214d73f3a5050949621a94bf7c" # R2 API token Secret Access Key
+  AWS_BUCKET: "" # R2 bucket name
+  AWS_ACCESS_KEY_ID: "" # R2 API token Access Key ID
+  AWS_SECRET_ACCESS_KEY: "" # R2 API token Secret Access Key
   AWS_DEFAULT_REGION: "auto"
-  AWS_ENDPOINT: "https://7b77e645ea1d9d284cc902ffe0fc5dde.r2.cloudflarestorage.com" # R2 endpoint URL
+  AWS_ENDPOINT: "" # R2 endpoint URL
   AWS_USE_PATH_STYLE_ENDPOINT: "true"
 
   # ── Mail (Mailtrap SMTP) ────────────────────────────────────
   MAIL_MAILER: "smtp"
   MAIL_HOST: "sandbox.smtp.mailtrap.io"
   MAIL_PORT: "2525"
-  MAIL_USERNAME: "1a634efcacb5de"
-  MAIL_PASSWORD: "06748c564ff808"
+  MAIL_USERNAME: ""
+  MAIL_PASSWORD: ""
   MAIL_FROM_ADDRESS: "book_wise@example.com"
   MAIL_FROM_NAME: "BookWise"
 
