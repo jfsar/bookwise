@@ -60,7 +60,7 @@
     "src": "_space-grotesk-700-normal-RjhwGPKo.woff2"
   },
   "resources/css/app.css": {
-    "file": "assets/app-BPqjAmrS.css",
+    "file": "assets/app-BHlQGI9H.css",
     "name": "app",
     "names": [
       "app.css"
@@ -69,12 +69,12 @@
     "isEntry": true
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-Dv68hRDH.js",
+    "file": "assets/app-CklPGbc1.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
     "css": [
-      "assets/app-BPqjAmrS.css"
+      "assets/app-BHlQGI9H.css"
     ]
   }
 }
