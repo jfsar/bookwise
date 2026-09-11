@@ -163,7 +163,7 @@ export default function Welcome() {
                             </div>
 
                             <div className="rounded-xl bg-surface-lowest dark:bg-surface-lowest p-6 shadow-ambient-sm">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary-container dark:bg-secondary-container text-secondary dark:text-secondary">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-container dark:bg-primary-container text-primary dark:text-primary">
                                     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <rect x="8" y="3" width="12" height="18" rx="2" />
                                         <rect x="3" y="8" width="12" height="13" rx="2" />

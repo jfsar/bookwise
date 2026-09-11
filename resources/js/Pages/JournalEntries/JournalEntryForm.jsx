@@ -10,7 +10,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/Components/ui/dialog';
-import { NativeSelect } from '@/Components/ui/native-select';
+import { NativeSelect, NativeSelectOption } from '@/Components/ui/native-select';
 import { Textarea } from '@/Components/ui/textarea';
 
 const emptyForm = {
@@ -159,11 +159,11 @@ export default function JournalEntryForm({ open, onClose, journals, currencies, 
                                     }}
                                     className="mt-1 w-full"
                                 >
-                                    <option value="">Select fiscal year...</option>
+                                    <NativeSelectOption value="">Select fiscal year...</NativeSelectOption>
                                     {fiscalYears.map((fiscalYear) => (
-                                        <option key={fiscalYear.id} value={fiscalYear.id}>
+                                        <NativeSelectOption key={fiscalYear.id} value={fiscalYear.id}>
                                             {fiscalYear.name}
-                                        </option>
+                                        </NativeSelectOption>
                                     ))}
                                 </NativeSelect>
                                 {errors.fiscal_year_id && <p className="mt-1 text-sm font-medium text-destructive">{errors.fiscal_year_id}</p>}
@@ -176,13 +176,13 @@ export default function JournalEntryForm({ open, onClose, journals, currencies, 
                                     className="mt-1 w-full"
                                     disabled={!data.fiscal_year_id}
                                 >
-                                    <option value="">Select period...</option>
+                                    <NativeSelectOption value="">Select period...</NativeSelectOption>
                                     {accountingPeriods
                                         .filter((period) => period.fiscal_year_id === parseInt(data.fiscal_year_id, 10))
                                         .map((period) => (
-                                            <option key={period.id} value={period.id}>
+                                            <NativeSelectOption key={period.id} value={period.id}>
                                                 {period.name}
-                                            </option>
+                                            </NativeSelectOption>
                                         ))}
                                 </NativeSelect>
                                 {errors.accounting_period_id && (
@@ -192,11 +192,11 @@ export default function JournalEntryForm({ open, onClose, journals, currencies, 
                             <div>
                                 <Label>Journal *</Label>
                                 <NativeSelect value={data.journal_id} onChange={(event) => setData('journal_id', event.target.value)} className="mt-1 w-full">
-                                    <option value="">Select journal...</option>
+                                    <NativeSelectOption value="">Select journal...</NativeSelectOption>
                                     {journals.map((journal) => (
-                                        <option key={journal.id} value={journal.id}>
+                                        <NativeSelectOption key={journal.id} value={journal.id}>
                                             {journal.code} - {journal.name}
-                                        </option>
+                                        </NativeSelectOption>
                                     ))}
                                 </NativeSelect>
                                 {errors.journal_id && <p className="mt-1 text-sm font-medium text-destructive">{errors.journal_id}</p>}
@@ -204,11 +204,11 @@ export default function JournalEntryForm({ open, onClose, journals, currencies, 
                             <div>
                                 <Label>Currency *</Label>
                                 <NativeSelect value={data.currency_id} onChange={(event) => setData('currency_id', event.target.value)} className="mt-1 w-full">
-                                    <option value="">Select currency...</option>
+                                    <NativeSelectOption value="">Select currency...</NativeSelectOption>
                                     {currencies.map((currency) => (
-                                        <option key={currency.id} value={currency.id}>
+                                        <NativeSelectOption key={currency.id} value={currency.id}>
                                             {currency.code} - {currency.name}
-                                        </option>
+                                        </NativeSelectOption>
                                     ))}
                                 </NativeSelect>
                                 {errors.currency_id && <p className="mt-1 text-sm font-medium text-destructive">{errors.currency_id}</p>}
@@ -245,11 +245,11 @@ export default function JournalEntryForm({ open, onClose, journals, currencies, 
                                     onChange={(event) => setNewLine({ ...newLine, account_id: event.target.value })}
                                     className="w-full"
                                 >
-                                    <option value="">Select account...</option>
+                                    <NativeSelectOption value="">Select account...</NativeSelectOption>
                                     {visibleAccounts.map((account) => (
-                                            <option key={account.id} value={account.id}>
+                                            <NativeSelectOption key={account.id} value={account.id}>
                                                 {account.code} - {account.name}
-                                            </option>
+                                            </NativeSelectOption>
                                         ))}
                                 </NativeSelect>
                                 <Input

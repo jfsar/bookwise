@@ -2,6 +2,7 @@
 paths:
   - 'resources/views/**'
   - 'resources/js/**'
+  - resources/views/app.blade.php
 ---
 
 # Views
@@ -25,3 +26,9 @@ Livewire, Alpine, and Blade page templates are removed. Pages are React componen
 
 ## Use shadcn/ui exclusively; keep Luminous tokens
 All UI must use shadcn/ui components from resources/js/Components/ui (install missing ones with `npx shadcn@latest add`). The custom Luminous primitives (Alert, Button, Card, Chip, Input, InputError, Label, Modal, Select, Textarea) were deleted — do not recreate them. Imports must be `@/Components/ui/...` (capital C). Luminous palette is preserved via shadcn CSS variables in resources/css/app.css; keep Luminous bg-shift/ambient-shadow/font-display classes in page layout. Mapping from old components: see .ai/rules/components.md.
+
+## React apps need @viteReactRefresh before @vite
+This is an Inertia + React + Vite app. The root view must call @viteReactRefresh before @vite in the <head>. Without it, SSR-rendered pages lack the React refresh preamble and the browser throws "@vitejs/plugin-react can't detect preamble", breaking HMR. Do not remove it.
+
+## Always inject @fonts in the root view
+The app customizes fonts via vite.config.js (bunny Inter + Space Grotesk). The root view MUST call @fonts (before @vite, after @viteReactRefresh) so Laravel injects the @font-face rules and preload links from the fonts manifest. Without it, --font-sans/--font-display silently fall back to system-ui even though the font files are built fine.

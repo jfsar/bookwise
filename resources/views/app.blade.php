@@ -16,6 +16,8 @@
             }
         </script>
 
+        @viteReactRefresh
+        @fonts
         @vite(['resources/css/app.css', 'resources/js/app.jsx'])
         @inertia
     </head>

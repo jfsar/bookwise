@@ -80,7 +80,7 @@ export default function AppLayout({ children }) {
                             <SidebarGroup key={group.title}>
                                 <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
                                 <SidebarGroupContent>
-                                    <SidebarMenu>
+                                    <SidebarMenu className="gap-1">
                                         {group.items.map((item) => (
                                             <SidebarMenuItem key={item.href}>
                                                 <SidebarMenuButton

@@ -26,7 +26,7 @@ export default function TwoFactorChallenge() {
                 <div className="mb-4 font-medium text-sm text-success dark:text-success">{flash.status}</div>
             )}
 
-            <form onSubmit={submit}>
+            <form onSubmit={submit} className="space-y-4">
                 <Label>Code</Label>
                 <Input
                     type="text"

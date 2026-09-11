@@ -6,7 +6,7 @@ import PeriodForm from '@/Pages/PeriodClosing/PeriodForm';
 import StatusBadge from '@/Components/StatusBadge';
 import { Button } from '@/Components/ui/button';
 import { Card } from '@/Components/ui/card';
-import { NativeSelect } from '@/Components/ui/native-select';
+import { NativeSelect, NativeSelectOption } from '@/Components/ui/native-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 
 const statusKeys = { open: 'success', closing: 'warning', closed: 'error' };
@@ -47,11 +47,11 @@ export default function PeriodClosingIndex() {
                         onChange={(event) => setSelectedFiscalYearId(event.target.value)}
                         className="w-full"
                     >
-                        <option value="">All Fiscal Years</option>
+                        <NativeSelectOption value="">All Fiscal Years</NativeSelectOption>
                         {fiscalYears.map((fiscalYear) => (
-                            <option key={fiscalYear.id} value={fiscalYear.id}>
+                            <NativeSelectOption key={fiscalYear.id} value={fiscalYear.id}>
                                 {fiscalYear.name}
-                            </option>
+                            </NativeSelectOption>
                         ))}
                     </NativeSelect>
                 </div>

@@ -10,7 +10,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/Components/ui/dialog';
-import { NativeSelect } from '@/Components/ui/native-select';
+import { NativeSelect, NativeSelectOption } from '@/Components/ui/native-select';
 import { Textarea } from '@/Components/ui/textarea';
 
 const emptyForm = {
@@ -84,11 +84,11 @@ export default function AccountForm({ open, onClose, account, accountTypes, pare
                         <div>
                             <Label>Account Type *</Label>
                             <NativeSelect value={data.account_type_id} onChange={(event) => setData('account_type_id', event.target.value)} className="mt-1 w-full">
-                                <option value="">Select type...</option>
+                                <NativeSelectOption value="">Select type...</NativeSelectOption>
                                 {accountTypes.map((type) => (
-                                    <option key={type.id} value={type.id}>
+                                    <NativeSelectOption key={type.id} value={type.id}>
                                         {type.name}
-                                    </option>
+                                    </NativeSelectOption>
                                 ))}
                             </NativeSelect>
                             {errors.account_type_id && <p className="mt-1 text-sm font-medium text-destructive">{errors.account_type_id}</p>}
@@ -96,19 +96,19 @@ export default function AccountForm({ open, onClose, account, accountTypes, pare
                         <div>
                             <Label>Normal Balance *</Label>
                             <NativeSelect value={data.normal_balance} onChange={(event) => setData('normal_balance', event.target.value)} className="mt-1 w-full">
-                                <option value="debit">Debit</option>
-                                <option value="credit">Credit</option>
+                                <NativeSelectOption value="debit">Debit</NativeSelectOption>
+                                <NativeSelectOption value="credit">Credit</NativeSelectOption>
                             </NativeSelect>
                             {errors.normal_balance && <p className="mt-1 text-sm font-medium text-destructive">{errors.normal_balance}</p>}
                         </div>
                         <div className="col-span-2">
                             <Label>Parent Account</Label>
                             <NativeSelect value={data.parent_id} onChange={(event) => setData('parent_id', event.target.value)} className="mt-1 w-full">
-                                <option value="">None (Root)</option>
+                                <NativeSelectOption value="">None (Root)</NativeSelectOption>
                                 {parentAccounts.map((parent) => (
-                                    <option key={parent.id} value={parent.id}>
+                                    <NativeSelectOption key={parent.id} value={parent.id}>
                                         {parent.code} - {parent.name}
-                                    </option>
+                                    </NativeSelectOption>
                                 ))}
                             </NativeSelect>
                             {errors.parent_id && <p className="mt-1 text-sm font-medium text-destructive">{errors.parent_id}</p>}

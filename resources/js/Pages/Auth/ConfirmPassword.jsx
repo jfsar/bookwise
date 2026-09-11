@@ -21,7 +21,7 @@ export default function ConfirmPassword() {
                 This is a secure area of the application. Please confirm your password before continuing.
             </div>
 
-            <form onSubmit={submit}>
+            <form onSubmit={submit} className="space-y-4">
                 <Label>Password</Label>
                 <Input
                     type="password"

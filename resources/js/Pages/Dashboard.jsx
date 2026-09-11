@@ -6,7 +6,7 @@ import { Button } from '@/Components/ui/button';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
-import { NativeSelect } from '@/Components/ui/native-select';
+import { NativeSelect, NativeSelectOption } from '@/Components/ui/native-select';
 
 const modules = [
     { title: 'Chart of Accounts', description: 'Manage your accounts and hierarchy.', href: '/accounts' },
@@ -127,11 +127,11 @@ export default function Dashboard({ currencies }) {
                                         onChange={(event) => setData('base_currency_id', event.target.value)}
                                         className="mt-1 w-full"
                                     >
-                                        <option value="">Select currency...</option>
+                                        <NativeSelectOption value="">Select currency...</NativeSelectOption>
                                         {currencies.map((currency) => (
-                                            <option key={currency.id} value={currency.id}>
+                                            <NativeSelectOption key={currency.id} value={currency.id}>
                                                 {currency.code} - {currency.name}
-                                            </option>
+                                            </NativeSelectOption>
                                         ))}
                                     </NativeSelect>
                                     {errors.base_currency_id && <p className="mt-1 text-sm font-medium text-destructive">{errors.base_currency_id}</p>}
@@ -140,9 +140,9 @@ export default function Dashboard({ currencies }) {
                                     <Label>Timezone *</Label>
                                     <NativeSelect value={data.timezone} onChange={(event) => setData('timezone', event.target.value)} className="mt-1 w-full">
                                         {timezones.map((timezone) => (
-                                            <option key={timezone.value} value={timezone.value}>
+                                            <NativeSelectOption key={timezone.value} value={timezone.value}>
                                                 {timezone.label}
-                                            </option>
+                                            </NativeSelectOption>
                                         ))}
                                     </NativeSelect>
                                     {errors.timezone && <p className="mt-1 text-sm font-medium text-destructive">{errors.timezone}</p>}
@@ -155,9 +155,9 @@ export default function Dashboard({ currencies }) {
                                         className="mt-1 w-full"
                                     >
                                         {months.map((month, index) => (
-                                            <option key={month} value={index + 1}>
+                                            <NativeSelectOption key={month} value={index + 1}>
                                                 {month}
-                                            </option>
+                                            </NativeSelectOption>
                                         ))}
                                     </NativeSelect>
                                     {errors.fiscal_year_start_month && <p className="mt-1 text-sm font-medium text-destructive">{errors.fiscal_year_start_month}</p>}
@@ -170,9 +170,9 @@ export default function Dashboard({ currencies }) {
                                         className="mt-1 w-full"
                                     >
                                         {[0, 2, 3, 4].map((places) => (
-                                            <option key={places} value={places}>
+                                            <NativeSelectOption key={places} value={places}>
                                                 {places}
-                                            </option>
+                                            </NativeSelectOption>
                                         ))}
                                     </NativeSelect>
                                 </div>

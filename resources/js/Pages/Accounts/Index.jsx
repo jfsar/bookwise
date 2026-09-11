@@ -8,7 +8,7 @@ import StatusBadge from '@/Components/StatusBadge';
 import { Button } from '@/Components/ui/button';
 import { Card } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
-import { NativeSelect } from '@/Components/ui/native-select';
+import { NativeSelect, NativeSelectOption } from '@/Components/ui/native-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 
 export default function AccountsIndex() {
@@ -66,19 +66,19 @@ export default function AccountsIndex() {
                 </div>
                 <div className="w-48">
                     <NativeSelect value={type} onChange={(event) => setType(event.target.value)} className="w-full">
-                        <option value="">All Types</option>
+                        <NativeSelectOption value="">All Types</NativeSelectOption>
                         {accountTypes.map((accountType) => (
-                            <option key={accountType.id} value={accountType.id}>
+                            <NativeSelectOption key={accountType.id} value={accountType.id}>
                                 {accountType.name}
-                            </option>
+                            </NativeSelectOption>
                         ))}
                     </NativeSelect>
                 </div>
                 <div className="w-48">
                     <NativeSelect value={status} onChange={(event) => setStatus(event.target.value)} className="w-full">
-                        <option value="">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
+                        <NativeSelectOption value="">All Status</NativeSelectOption>
+                        <NativeSelectOption value="active">Active</NativeSelectOption>
+                        <NativeSelectOption value="inactive">Inactive</NativeSelectOption>
                     </NativeSelect>
                 </div>
             </div>

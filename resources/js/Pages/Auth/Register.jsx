@@ -21,7 +21,7 @@ export default function Register() {
     return (
         <form onSubmit={submit}>
             <div className="space-y-4">
-                <div>
+                <div className="space-y-2">
                     <Label>Name</Label>
                     <Input
                         type="text"
@@ -36,7 +36,7 @@ export default function Register() {
                     {errors.name && <p className="mt-1 text-sm font-medium text-destructive">{errors.name}</p>}
                 </div>
 
-                <div>
+                <div className="space-y-2">
                     <Label>Email</Label>
                     <Input
                         type="email"
@@ -50,7 +50,7 @@ export default function Register() {
                     {errors.email && <p className="mt-1 text-sm font-medium text-destructive">{errors.email}</p>}
                 </div>
 
-                <div>
+                <div className="space-y-2">
                     <Label>Password</Label>
                     <Input
                         type="password"
@@ -64,7 +64,7 @@ export default function Register() {
                     {errors.password && <p className="mt-1 text-sm font-medium text-destructive">{errors.password}</p>}
                 </div>
 
-                <div>
+                <div className="space-y-2">
                     <Label>Confirm Password</Label>
                     <Input
                         type="password"

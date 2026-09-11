@@ -27,8 +27,8 @@ export default function ForgotPassword() {
                 <div className="mb-4 font-medium text-sm text-success dark:text-success">{flash.status}</div>
             )}
 
-            <form onSubmit={submit}>
-                <Label>Email</Label>
+            <form onSubmit={submit} className="space-y-2">
+                <Label>Email</Label> 
                 <Input
                     type="email"
                     name="email"
@@ -40,10 +40,11 @@ export default function ForgotPassword() {
                     className="mt-1"
                 />
                 {errors.email && <p className="mt-1 text-sm font-medium text-destructive">{errors.email}</p>}
-
-                <Button type="submit" variant="default" disabled={processing} className="mt-4">
-                    Email Password Reset Link
-                </Button>
+                <div className="flex justify-end mt-4">
+                    <Button type="submit" variant="default" disabled={processing}>
+                        Email Password Reset Link
+                    </Button>
+                </div>
             </form>
         </>
     );

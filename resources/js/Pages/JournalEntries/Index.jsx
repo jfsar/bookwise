@@ -9,7 +9,7 @@ import StatusBadge from '@/Components/StatusBadge';
 import { Button } from '@/Components/ui/button';
 import { Card } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
-import { NativeSelect } from '@/Components/ui/native-select';
+import { NativeSelect, NativeSelectOption } from '@/Components/ui/native-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 
 const statusColors = {
@@ -76,12 +76,12 @@ export default function JournalEntriesIndex() {
                 </div>
                 <div className="w-48">
                     <NativeSelect value={status} onChange={(event) => setStatus(event.target.value)} className="w-full">
-                        <option value="">All Statuses</option>
-                        <option value="draft">Draft</option>
-                        <option value="submitted">Submitted</option>
-                        <option value="approved">Approved</option>
-                        <option value="posted">Posted</option>
-                        <option value="reversed">Reversed</option>
+                        <NativeSelectOption value="">All Statuses</NativeSelectOption>
+                        <NativeSelectOption value="draft">Draft</NativeSelectOption>
+                        <NativeSelectOption value="submitted">Submitted</NativeSelectOption>
+                        <NativeSelectOption value="approved">Approved</NativeSelectOption>
+                        <NativeSelectOption value="posted">Posted</NativeSelectOption>
+                        <NativeSelectOption value="reversed">Reversed</NativeSelectOption>
                     </NativeSelect>
                 </div>
             </div>

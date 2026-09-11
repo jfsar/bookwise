@@ -21,7 +21,7 @@ export default function ResetPassword({ token, email }) {
     return (
         <form onSubmit={submit}>
             <div className="space-y-4">
-                <div>
+                <div className="space-y-2">
                     <Label>Email</Label>
                     <Input
                         type="email"
@@ -35,7 +35,7 @@ export default function ResetPassword({ token, email }) {
                     {errors.email && <p className="mt-1 text-sm font-medium text-destructive">{errors.email}</p>}
                 </div>
 
-                <div>
+                <div className="space-y-2">
                     <Label>Password</Label>
                     <Input
                         type="password"
@@ -48,7 +48,7 @@ export default function ResetPassword({ token, email }) {
                     {errors.password && <p className="mt-1 text-sm font-medium text-destructive">{errors.password}</p>}
                 </div>
 
-                <div>
+                <div className="space-y-2">
                     <Label>Confirm Password</Label>
                     <Input
                         type="password"
