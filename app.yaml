@@ -57,10 +57,4 @@ capabilities:
     - path: /
 scaling:
   mode: single_concurrency
-jobs:
-- name: run-migrations
-  trigger: pre-deployment
-  action:
-    execute:
-      command: migrate
 kind: wasmer.io/App.v0
