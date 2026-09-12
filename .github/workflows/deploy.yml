@@ -118,6 +118,24 @@ jobs:
           export PATH="$HOME/.wasmer/bin:$PATH"
           wasmer login "$WASMER_TOKEN"
 
+      - name: Run production database migrations
+        env:
+          DB_HOST_DIRECT: ${{ secrets.DB_HOST_DIRECT }}
+          DB_PORT: "5432"
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SSLMODE: require
+          APP_KEY: ${{ secrets.APP_KEY }}
+        run: php artisan migrate --force --database=pgsql_direct
+
+      - name: Deploy to Wasmer
+        env:
+          WASMER_TOKEN: ${{ secrets.WASMER_TOKEN }}
+        run: |
+          export PATH="$HOME/.wasmer/bin:$PATH"
+          wasmer deploy --non-interactive
+
       - name: Sync secrets to Wasmer
         env:
           WASMER_TOKEN: ${{ secrets.WASMER_TOKEN }}
@@ -146,18 +164,7 @@ jobs:
           sync_secret AWS_SECRET_ACCESS_KEY "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
           sync_secret AWS_ENDPOINT "${{ secrets.AWS_ENDPOINT }}"
 
-      - name: Run production database migrations
-        env:
-          DB_HOST_DIRECT: ${{ secrets.DB_HOST_DIRECT }}
-          DB_PORT: "5432"
-          DB_DATABASE: ${{ secrets.DB_DATABASE }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_SSLMODE: require
-          APP_KEY: ${{ secrets.APP_KEY }}
-        run: php artisan migrate --force --database=pgsql_direct
-
-      - name: Deploy to Wasmer
+      - name: Redeploy to Wasmer (apply secrets)
         env:
           WASMER_TOKEN: ${{ secrets.WASMER_TOKEN }}
         run: |
