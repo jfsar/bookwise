@@ -15,7 +15,7 @@ debug: false
 env:
   APP_NAME: BookWise
   APP_ENV: production
-  APP_DEBUG: "false"
+  APP_DEBUG: "true"
   APP_URL: "" # TODO: replace with real deployed URL
 
   APP_LOCALE: en
