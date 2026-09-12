@@ -116,7 +116,7 @@ jobs:
         run: |
           echo "$HOME/.wasmer/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/.wasmer/bin:$PATH"
-          wasmer login --token "$WASMER_TOKEN"
+          wasmer login "$WASMER_TOKEN"
 
       - name: Sync secrets to Wasmer
         env:
