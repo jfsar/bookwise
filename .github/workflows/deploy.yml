@@ -129,6 +129,17 @@ jobs:
           APP_KEY: ${{ secrets.APP_KEY }}
         run: php artisan migrate --force --database=pgsql_direct
 
+      - name: Seed production database (admin user, roles, permissions)
+        env:
+          DB_HOST_DIRECT: ${{ secrets.DB_HOST_DIRECT }}
+          DB_PORT: "5432"
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SSLMODE: require
+          APP_KEY: ${{ secrets.APP_KEY }}
+        run: php artisan db:seed --force --no-interaction --database=pgsql_direct
+
       - name: Deploy to Wasmer
         env:
           WASMER_TOKEN: ${{ secrets.WASMER_TOKEN }}
