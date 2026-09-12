@@ -45,6 +45,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare Laravel storage directories
+        run: mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs bootstrap/cache
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
