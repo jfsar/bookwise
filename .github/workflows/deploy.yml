@@ -19,6 +19,21 @@ jobs:
     timeout-minutes: 15
     environment: production
 
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: laravel
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: laravel_testing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Validate required secrets
         run: |
@@ -51,19 +66,15 @@ jobs:
             --no-interaction
 
       - name: Prepare test environment
-        env:
-          TEST_DB_HOST: ${{ secrets.DB_HOST_TEST }}
-          TEST_DB_USERNAME: ${{ secrets.DB_HOST_TEST_USERNAME }}
-          TEST_DB_PASSWORD: ${{ secrets.DB_HOST_TEST_PASSWORD }}
-          TEST_DB_DATABASE: ${{ secrets.DB_HOST_TEST_DATABASE }}
         run: |
           cp .env.example .env
           php artisan key:generate
-          echo "TEST_DB_HOST=${TEST_DB_HOST}" >> .env
-          echo "TEST_DB_USERNAME=${TEST_DB_USERNAME}" >> .env
-          echo "TEST_DB_PASSWORD=${TEST_DB_PASSWORD}" >> .env
-          echo "TEST_DB_DATABASE=${TEST_DB_DATABASE}" >> .env
-          echo "TEST_DB_SSLMODE=require" >> .env
+          echo "TEST_DB_HOST=127.0.0.1" >> .env
+          echo "TEST_DB_PORT=5432" >> .env
+          echo "TEST_DB_USERNAME=laravel" >> .env
+          echo "TEST_DB_PASSWORD=password" >> .env
+          echo "TEST_DB_DATABASE=laravel_testing" >> .env
+          echo "TEST_DB_SSLMODE=disable" >> .env
 
       - name: Run tests
         run: php artisan test
@@ -94,7 +105,7 @@ jobs:
           test -f public/build/manifest.json
 
       - name: Install Wasmer
-        run: curl https://get.wasmer.io -sSfL | sh -s v6.1.0
+        run: curl https://get.wasmer.io -sSfL | sh
 
       - name: Authenticate with Wasmer
         env:
