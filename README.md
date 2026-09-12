@@ -2,7 +2,6 @@
 
 > A production-style, modular Laravel accounting application built around a reliable double-entry general ledger.
 
-**SRS:** v1.1 — Architecture & Database Corrections  
 **Application type:** Server-rendered Laravel modular monolith  
 **Frontend:** Blade + Livewire + Tailwind CSS  
 **Backend:** Laravel / PHP  
