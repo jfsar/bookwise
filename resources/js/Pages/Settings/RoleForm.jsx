@@ -20,6 +20,7 @@ export default function RoleForm({ open, onClose, role, permissions }) {
         permission_ids: [],
     });
 
+
     useEffect(() => {
         if (open) {
             setData({
@@ -31,9 +32,12 @@ export default function RoleForm({ open, onClose, role, permissions }) {
     }, [open, role]);
 
     function togglePermission(id) {
-        setData('permission_ids', (current) =>
-            current.includes(id) ? current.filter((existing) => existing !== id) : [...current, id]
-        );
+        setData((current) => ({
+            ...current,
+            permission_ids: current.permission_ids.includes(id)
+                ? current.permission_ids.filter((existing) => existing !== id)
+                : [...current.permission_ids, id],
+        }));
     }
 
     function submit(event) {
