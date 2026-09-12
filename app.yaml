@@ -16,7 +16,7 @@ env:
   APP_NAME: BookWise
   APP_ENV: production
   APP_DEBUG: "false"
-  APP_URL: "" # TODO: replace with real deployed URL
+  APP_URL: "https://bookwise.wasmer.app/" # TODO: replace with real deployed URL
 
   APP_LOCALE: en
   APP_FALLBACK_LOCALE: en
