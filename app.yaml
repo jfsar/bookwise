@@ -15,7 +15,7 @@ debug: false
 env:
   APP_NAME: BookWise
   APP_ENV: production
-  APP_DEBUG: "true"
+  APP_DEBUG: "false"
   APP_URL: "" # TODO: replace with real deployed URL
 
   APP_LOCALE: en
@@ -51,7 +51,7 @@ env:
 
   MEMCACHED_HOST: 127.0.0.1
 
-  REDIS_CLIENT: phpredis
+  REDIS_CLIENT: predis
   REDIS_PORT: "6379" # TODO: confirm against your Upstash/Redis provider's port
 
   MAIL_MAILER: smtp
