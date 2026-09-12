@@ -6,10 +6,12 @@ use App\Actions\JournalEntry\ApproveJournalEntry;
 use App\Actions\JournalEntry\CancelJournalEntry;
 use App\Actions\JournalEntry\CreateJournalEntry;
 use App\Actions\JournalEntry\PostJournalEntry;
+use App\Actions\JournalEntry\RejectJournalEntry;
 use App\Actions\JournalEntry\ReverseJournalEntry;
 use App\Actions\JournalEntry\SubmitJournalEntry;
 use App\Actions\Organization\SwitchOrganization;
 use App\Http\Requests\CancelJournalEntryRequest;
+use App\Http\Requests\RejectJournalEntryRequest;
 use App\Http\Requests\ReverseJournalEntryRequest;
 use App\Http\Requests\StoreJournalEntryRequest;
 use App\Models\Account;
@@ -183,6 +185,19 @@ class JournalEntryController extends Controller
         }
     }
 
+    public function reject(RejectJournalEntryRequest $request, JournalEntry $journalEntry): RedirectResponse
+    {
+        $this->authorize('reject', $journalEntry);
+
+        try {
+            (new RejectJournalEntry)->handle($journalEntry, $request->user(), $request->input('reason'));
+
+            return back()->with('success', 'Entry rejected.');
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     public function post(Request $request, JournalEntry $journalEntry): RedirectResponse
     {
         $this->authorize('post', $journalEntry);
@@ -240,6 +255,7 @@ class JournalEntryController extends Controller
             'can' => [
                 'submit' => $user->can('submit', $entry),
                 'approve' => $user->can('approve', $entry),
+                'reject' => $user->can('reject', $entry),
                 'post' => $user->can('post', $entry),
                 'reverse' => $user->can('reverse', $entry),
                 'cancel' => $user->can('cancel', $entry),

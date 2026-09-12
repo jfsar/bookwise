@@ -20,6 +20,10 @@ class UpdateAccount
                 'description' => $data['description'] ?? $account->description,
                 'normal_balance' => $data['normal_balance'] ?? $account->normal_balance,
                 'account_category' => $data['account_category'] ?? $account->account_category,
+                'cash_flow_section' => array_key_exists('cash_flow_section', $data)
+                    ? $data['cash_flow_section']
+                    : $account->cash_flow_section,
+                'is_cash_account' => $data['is_cash_account'] ?? $account->is_cash_account,
                 'is_posting_account' => $data['is_posting_account'] ?? $account->is_posting_account,
                 'is_active' => $data['is_active'] ?? $account->is_active,
                 'allow_manual_posting' => $data['allow_manual_posting'] ?? $account->allow_manual_posting,
@@ -40,6 +44,8 @@ class UpdateAccount
             'description' => ['nullable', 'string'],
             'normal_balance' => ['sometimes', 'string', 'in:debit,credit'],
             'account_category' => ['nullable', 'string', 'in:asset,liability,equity,revenue,expense'],
+            'cash_flow_section' => ['nullable', 'string', 'in:operating,investing,financing'],
+            'is_cash_account' => ['sometimes', 'boolean'],
             'is_posting_account' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
             'allow_manual_posting' => ['sometimes', 'boolean'],

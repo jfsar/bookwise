@@ -1,12 +1,20 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    BanknoteArrowDown,
     BookOpen,
     BookOpenCheck,
     CalendarRange,
     FileText,
+    History,
     LayoutDashboard,
+    ListChecks,
     Lock,
     NotebookPen,
+    ScrollText,
+    Scale,
+    ShieldCheck,
+    Users,
+    Wallet,
 } from 'lucide-react';
 
 import OrgSwitcher from '@/Components/OrgSwitcher';
@@ -43,8 +51,23 @@ const navigation = [
     {
         title: 'Reporting',
         items: [
+            { label: 'General Ledger', href: '/reports/general-ledger', icon: ScrollText },
+            { label: 'Trial Balance', href: '/reports/trial-balance', icon: Scale },
+            { label: 'Income Statement', href: '/reports/income-statement', icon: ListChecks },
+            { label: 'Balance Sheet', href: '/reports/balance-sheet', icon: Wallet },
+            { label: 'Cash Flow', href: '/reports/cash-flow', icon: BanknoteArrowDown },
             { label: 'Fiscal Years', href: '/fiscal-years', icon: CalendarRange },
             { label: 'Period Closing', href: '/period-closing', icon: Lock },
+        ],
+    },
+    {
+        title: 'Settings',
+        items: [
+            { label: 'Organization', href: '/settings/organization', icon: Wallet },
+            { label: 'Users', href: '/settings/users', icon: Users },
+            { label: 'Roles', href: '/settings/roles', icon: ShieldCheck },
+            { label: 'Audit Logs', href: '/settings/audit-logs', icon: History },
+            { label: 'Sessions', href: '/settings/sessions', icon: Lock },
         ],
     },
 ];

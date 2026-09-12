@@ -60,7 +60,9 @@ class CreateJournalEntry
             $lineNumber = 1;
             foreach ($data['lines'] as $lineData) {
                 $account = Account::findOrFail($lineData['account_id']);
-                $amount = (float) ($lineData['debit'] ?? $lineData['credit'] ?? 0);
+                $debit = (float) ($lineData['debit'] ?? 0);
+                $credit = (float) ($lineData['credit'] ?? 0);
+                $amount = $debit > 0 ? $debit : $credit;
 
                 JournalEntryLine::create([
                     'organization_id' => $organization->id,

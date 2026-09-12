@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Account\CreateAccount;
 use App\Actions\Account\UpdateAccount;
 use App\Actions\Organization\SwitchOrganization;
+use App\Enums\CashFlowSection;
 use App\Http\Requests\StoreAccountRequest;
 use App\Http\Requests\UpdateAccountRequest;
 use App\Models\Account;
@@ -68,6 +69,12 @@ class AccountController extends Controller
                     ])
                 : [],
             'filters' => $request->only(['search', 'type', 'status']),
+            'cashFlowSections' => collect(CashFlowSection::cases())
+                ->map(fn (CashFlowSection $section) => [
+                    'value' => $section->value,
+                    'label' => $section->label(),
+                ])
+                ->all(),
         ]);
     }
 
@@ -107,6 +114,8 @@ class AccountController extends Controller
             'parent_id' => $account->parent_id,
             'parent' => $account->parent ? ['id' => $account->parent->id, 'code' => $account->parent->code] : null,
             'normal_balance' => $account->normal_balance->value,
+            'cash_flow_section' => $account->cash_flow_section?->value,
+            'is_cash_account' => $account->is_cash_account,
             'is_posting_account' => $account->is_posting_account,
             'is_active' => $account->is_active,
             'allow_manual_posting' => $account->allow_manual_posting,

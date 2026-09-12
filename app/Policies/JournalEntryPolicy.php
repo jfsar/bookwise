@@ -48,6 +48,13 @@ class JournalEntryPolicy
             && $journalEntry->submitted_by !== $user->id;
     }
 
+    public function reject(User $user, JournalEntry $journalEntry): bool
+    {
+        return $user->hasPermissionTo('reject-journal-entries', $journalEntry->organization)
+            && $journalEntry->status->value === 'submitted'
+            && $journalEntry->submitted_by !== $user->id;
+    }
+
     public function post(User $user, JournalEntry $journalEntry): bool
     {
         return $user->hasPermissionTo('post-journal-entries', $journalEntry->organization)

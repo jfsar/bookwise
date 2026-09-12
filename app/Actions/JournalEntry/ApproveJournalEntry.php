@@ -6,6 +6,7 @@ use App\Actions\Action;
 use App\Enums\JournalEntryStatus;
 use App\Models\JournalEntry;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 
 class ApproveJournalEntry
@@ -32,6 +33,16 @@ class ApproveJournalEntry
                 'approved_by' => $approver->id,
                 'approved_at' => now(),
             ]);
+
+            app(AuditLogService::class)->record(
+                $entry->organization,
+                $approver->id,
+                'journal-entry.approved',
+                JournalEntry::class,
+                $entry->id,
+                ['status' => 'submitted'],
+                ['status' => 'approved']
+            );
 
             return $entry->fresh();
         });
