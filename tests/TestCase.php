@@ -12,4 +12,12 @@ abstract class TestCase extends BaseTestCase
 
         $this->withoutVite();
     }
+
+    /**
+     * Confirm the authenticated user's password so requests pass the password.confirm middleware.
+     */
+    protected function confirmPassword(string $password = 'password'): void
+    {
+        $this->post('/user/confirm-password', ['password' => $password]);
+    }
 }

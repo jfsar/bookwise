@@ -31,13 +31,15 @@ class UserManagementTest extends TestCase
         $user = User::factory()->create();
         $user->organizations()->attach($organization->id, ['membership_status' => 'active']);
 
-        $this->actingAs($user)
-            ->post('/settings/users', [
-                'name' => 'Jane Doe',
-                'email' => 'jane@example.com',
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
-            ])
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->post('/settings/users', [
+            'name' => 'Jane Doe',
+            'email' => 'jane@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])
             ->assertForbidden();
     }
 
@@ -55,14 +57,16 @@ class UserManagementTest extends TestCase
             'is_global' => false,
         ]);
 
-        $this->actingAs($user)
-            ->post('/settings/users', [
-                'name' => 'Jane Doe',
-                'email' => 'jane@example.com',
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
-                'role_id' => $role->id,
-            ])
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->post('/settings/users', [
+            'name' => 'Jane Doe',
+            'email' => 'jane@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role_id' => $role->id,
+        ])
             ->assertRedirect();
 
         $created = User::where('email', 'jane@example.com')->first();
@@ -82,12 +86,14 @@ class UserManagementTest extends TestCase
         $target = User::factory()->create();
         $target->organizations()->attach($organization->id, ['membership_status' => 'active']);
 
-        $this->actingAs($admin)
-            ->put("/settings/users/{$target->id}", [
-                'name' => $target->name,
-                'email' => $target->email,
-                'status' => 'inactive',
-            ])
+        $this->actingAs($admin);
+        $this->confirmPassword();
+
+        $this->put("/settings/users/{$target->id}", [
+            'name' => $target->name,
+            'email' => $target->email,
+            'status' => 'inactive',
+        ])
             ->assertRedirect();
 
         $this->assertSame('inactive', $target->fresh()->status);
@@ -100,12 +106,14 @@ class UserManagementTest extends TestCase
         $admin->organizations()->attach($organization->id, ['membership_status' => 'active']);
         $this->attachManageUsers($admin, $organization);
 
-        $this->actingAs($admin)
-            ->put("/settings/users/{$admin->id}", [
-                'name' => $admin->name,
-                'email' => $admin->email,
-                'status' => 'inactive',
-            ])
+        $this->actingAs($admin);
+        $this->confirmPassword();
+
+        $this->put("/settings/users/{$admin->id}", [
+            'name' => $admin->name,
+            'email' => $admin->email,
+            'status' => 'inactive',
+        ])
             ->assertRedirect()
             ->assertSessionHasErrors('status');
 
