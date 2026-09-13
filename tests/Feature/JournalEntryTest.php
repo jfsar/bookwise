@@ -26,7 +26,7 @@ class JournalEntryTest extends TestCase
     private function createEntry(Organization $org, User $creator, ?array $lines = null)
     {
         $journal = Journal::factory()->create(['organization_id' => $org->id]);
-        $currency = Currency::factory()->create(['code' => 'USD']);
+        $currency = Currency::factory()->create();
         $fiscalYear = FiscalYear::factory()->create(['organization_id' => $org->id]);
         $period = AccountingPeriod::factory()->create([
             'organization_id' => $org->id,
@@ -108,7 +108,7 @@ class JournalEntryTest extends TestCase
         $user = User::factory()->create();
 
         $journal = Journal::factory()->create(['organization_id' => $org->id]);
-        $currency = Currency::factory()->create(['code' => 'USD']);
+        $currency = Currency::factory()->create();
         $fiscalYear = FiscalYear::factory()->create(['organization_id' => $org->id]);
         $period = AccountingPeriod::factory()->create([
             'organization_id' => $org->id,

@@ -3,9 +3,12 @@
 namespace App\Actions\JournalEntry;
 
 use App\Actions\Action;
+use App\Enums\ApprovalActionType;
 use App\Enums\JournalEntryStatus;
+use App\Models\ApprovalRequest;
 use App\Models\JournalEntry;
 use App\Models\User;
+use App\Services\ApprovalWorkflowService;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +29,17 @@ class ApproveJournalEntry
 
             if (! $entry->isBalanced()) {
                 throw new \RuntimeException('Cannot approve an unbalanced entry. Debits must equal credits.');
+            }
+
+            $request = ApprovalRequest::forSubject($entry)
+                ->open()
+                ->latest('id')
+                ->first();
+
+            if ($request) {
+                app(ApprovalWorkflowService::class)->decide($request, $approver, ApprovalActionType::Approve);
+
+                return $entry->fresh();
             }
 
             $entry->update([

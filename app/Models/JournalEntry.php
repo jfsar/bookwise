@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Contracts\ApprovalSubject;
 use App\Enums\JournalEntryStatus;
 use App\Models\Concerns\HasUlidIdentifier;
+use App\Services\AuditLogService;
 use Carbon\Carbon;
 use Database\Factories\JournalEntryFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,7 +36,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read string|null $reversal_reason
  * @property-read string|null $rejection_reason
  */
-class JournalEntry extends Model
+class JournalEntry extends Model implements ApprovalSubject
 {
     /** @use HasFactory<JournalEntryFactory> */
     use HasFactory, HasUlidIdentifier;
@@ -195,5 +197,73 @@ class JournalEntry extends Model
     public function isPosted(): bool
     {
         return $this->status === JournalEntryStatus::Posted;
+    }
+
+    public function approvalTransactionType(): string
+    {
+        return 'journal-entry';
+    }
+
+    public function approvalOrganization(): Organization
+    {
+        return $this->organization;
+    }
+
+    public function approvalAmount(): string|float
+    {
+        return $this->totalDebit();
+    }
+
+    public function approvalAccountIds(): array
+    {
+        return $this->lines()->pluck('account_id')->all();
+    }
+
+    public function approveBy(User $approver, ?string $note): void
+    {
+        if ($this->status !== JournalEntryStatus::Submitted) {
+            throw new \RuntimeException('Only submitted entries can be approved.');
+        }
+
+        $this->update([
+            'status' => JournalEntryStatus::Approved,
+            'approved_by' => $approver->id,
+            'approved_at' => now(),
+            'rejection_reason' => null,
+            'updated_by' => $approver->id,
+        ]);
+
+        app(AuditLogService::class)->record(
+            $this->organization,
+            $approver->id,
+            'journal-entry.approved',
+            self::class,
+            $this->id,
+            ['status' => 'submitted'],
+            ['status' => 'approved']
+        );
+    }
+
+    public function rejectBy(User $actor, string $reason): void
+    {
+        if ($this->status !== JournalEntryStatus::Submitted) {
+            throw new \RuntimeException('Only submitted entries can be rejected.');
+        }
+
+        $this->update([
+            'status' => JournalEntryStatus::Rejected,
+            'rejection_reason' => $reason,
+            'updated_by' => $actor->id,
+        ]);
+
+        app(AuditLogService::class)->record(
+            $this->organization,
+            $actor->id,
+            'journal-entry.rejected',
+            self::class,
+            $this->id,
+            ['status' => 'submitted'],
+            ['status' => 'rejected', 'rejection_reason' => $reason]
+        );
     }
 }

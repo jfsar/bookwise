@@ -19,7 +19,7 @@ class OrganizationTest extends TestCase
     public function test_user_can_create_organization(): void
     {
         $user = User::factory()->create();
-        $currency = Currency::factory()->create(['code' => 'USD']);
+        $currency = Currency::factory()->create();
 
         $organization = (new CreateOrganization)->handle([
             'name' => 'Test Org',
@@ -79,7 +79,7 @@ class OrganizationTest extends TestCase
     {
         $user = User::factory()->create();
         $org = Organization::factory()->create(['created_by' => null]);
-        $currency = Currency::factory()->create(['code' => 'EUR']);
+        $currency = Currency::factory()->create();
 
         $user->organizations()->attach($org->id, ['membership_status' => 'active']);
 

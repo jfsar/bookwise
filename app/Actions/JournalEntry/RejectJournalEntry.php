@@ -3,9 +3,12 @@
 namespace App\Actions\JournalEntry;
 
 use App\Actions\Action;
+use App\Enums\ApprovalActionType;
 use App\Enums\JournalEntryStatus;
+use App\Models\ApprovalRequest;
 use App\Models\JournalEntry;
 use App\Models\User;
+use App\Services\ApprovalWorkflowService;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 
@@ -22,6 +25,17 @@ class RejectJournalEntry
 
             if ($entry->submitted_by === $rejecter->id) {
                 throw new \RuntimeException('Maker-checker: The rejecter cannot be the same person who submitted the entry.');
+            }
+
+            $request = ApprovalRequest::forSubject($entry)
+                ->open()
+                ->latest('id')
+                ->first();
+
+            if ($request) {
+                app(ApprovalWorkflowService::class)->decide($request, $rejecter, ApprovalActionType::Reject, $reason);
+
+                return $entry->fresh();
             }
 
             $entry->update([
