@@ -43,19 +43,4 @@ class CreateOrganization
             return $organization;
         });
     }
-
-    public function rules(): array
-    {
-        return [
-            'name' => ['required', 'string', 'max:200'],
-            'display_name' => ['nullable', 'string', 'max:200'],
-            'code' => ['required', 'string', 'max:50', 'unique:organizations,code'],
-            'country_code' => ['required', 'string', 'size:2'],
-            'base_currency_id' => ['required', 'exists:currencies,id'],
-            'timezone' => ['nullable', 'string', 'max:100'],
-            'fiscal_year_start_month' => ['nullable', 'integer', 'between:1,12'],
-            'date_format' => ['nullable', 'string', 'max:30'],
-            'decimal_places' => ['nullable', 'integer', 'between:0,9'],
-        ];
-    }
 }

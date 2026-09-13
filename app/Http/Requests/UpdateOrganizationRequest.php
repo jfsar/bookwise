@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Currency;
 use App\Models\Organization;
 use App\Models\User;
+use DateTimeZone;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateOrganizationRequest extends FormRequest
 {
@@ -44,9 +47,9 @@ class UpdateOrganizationRequest extends FormRequest
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:20'],
-            'country_code' => ['required', 'string', 'size:2'],
-            'base_currency_id' => ['required', 'exists:currencies,id'],
-            'timezone' => ['required', 'string', 'max:100'],
+            'country_code' => ['required', 'string', 'size:2', 'uppercase'],
+            'base_currency_id' => ['required', Rule::exists(Currency::class, 'id')->where('is_active', true)],
+            'timezone' => ['required', 'string', Rule::in(DateTimeZone::listIdentifiers())],
             'fiscal_year_start_month' => ['required', 'integer', 'between:1,12'],
             'date_format' => ['nullable', 'string', 'max:30'],
             'decimal_places' => ['nullable', 'integer', 'between:0,9'],

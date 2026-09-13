@@ -83,20 +83,23 @@ export default function OrganizationSettings() {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Legal Name *</Label>
-                            <Input value={data.name} onChange={(event) => setData('name', event.target.value)} className="mt-1" />
+                            <Input required value={data.name} onChange={(event) => setData('name', event.target.value)} className="mt-1" />
                             {errors.name && <p className="mt-1 text-sm font-medium text-destructive">{errors.name}</p>}
                         </div>
                         <div>
                             <Label>Display Name</Label>
                             <Input value={data.display_name} onChange={(event) => setData('display_name', event.target.value)} className="mt-1" />
+                            {errors.display_name && <p className="mt-1 text-sm font-medium text-destructive">{errors.display_name}</p>}
                         </div>
                         <div>
                             <Label>Registration Number</Label>
                             <Input value={data.registration_number} onChange={(event) => setData('registration_number', event.target.value)} className="mt-1" />
+                            {errors.registration_number && <p className="mt-1 text-sm font-medium text-destructive">{errors.registration_number}</p>}
                         </div>
                         <div>
                             <Label>Tax Number</Label>
                             <Input value={data.tax_number} onChange={(event) => setData('tax_number', event.target.value)} className="mt-1" />
+                            {errors.tax_number && <p className="mt-1 text-sm font-medium text-destructive">{errors.tax_number}</p>}
                         </div>
                         <div>
                             <Label>Email</Label>
@@ -106,6 +109,7 @@ export default function OrganizationSettings() {
                         <div>
                             <Label>Phone</Label>
                             <Input value={data.phone} onChange={(event) => setData('phone', event.target.value)} className="mt-1" />
+                            {errors.phone && <p className="mt-1 text-sm font-medium text-destructive">{errors.phone}</p>}
                         </div>
                     </div>
                 </Card>
@@ -115,25 +119,36 @@ export default function OrganizationSettings() {
                         <div className="col-span-2">
                             <Label>Address</Label>
                             <Input value={data.address_line_1} onChange={(event) => setData('address_line_1', event.target.value)} className="mt-1" placeholder="Line 1" />
+                            {errors.address_line_1 && <p className="mt-1 text-sm font-medium text-destructive">{errors.address_line_1}</p>}
                         </div>
                         <div className="col-span-2">
                             <Input value={data.address_line_2} onChange={(event) => setData('address_line_2', event.target.value)} className="mt-1" placeholder="Line 2" />
+                            {errors.address_line_2 && <p className="mt-1 text-sm font-medium text-destructive">{errors.address_line_2}</p>}
                         </div>
                         <div>
                             <Label>City</Label>
                             <Input value={data.city} onChange={(event) => setData('city', event.target.value)} className="mt-1" />
+                            {errors.city && <p className="mt-1 text-sm font-medium text-destructive">{errors.city}</p>}
                         </div>
                         <div>
                             <Label>State / Province</Label>
                             <Input value={data.state} onChange={(event) => setData('state', event.target.value)} className="mt-1" />
+                            {errors.state && <p className="mt-1 text-sm font-medium text-destructive">{errors.state}</p>}
                         </div>
                         <div>
                             <Label>Postal Code</Label>
                             <Input value={data.postal_code} onChange={(event) => setData('postal_code', event.target.value)} className="mt-1" />
+                            {errors.postal_code && <p className="mt-1 text-sm font-medium text-destructive">{errors.postal_code}</p>}
                         </div>
                         <div>
                             <Label>Country Code *</Label>
-                            <Input value={data.country_code} onChange={(event) => setData('country_code', event.target.value)} className="mt-1" maxLength={2} />
+                            <Input
+                                required
+                                value={data.country_code}
+                                onChange={(event) => setData('country_code', event.target.value.toUpperCase())}
+                                className="mt-1"
+                                maxLength={2}
+                            />
                             {errors.country_code && <p className="mt-1 text-sm font-medium text-destructive">{errors.country_code}</p>}
                         </div>
                     </div>
@@ -143,7 +158,7 @@ export default function OrganizationSettings() {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Base Currency *</Label>
-                            <NativeSelect value={data.base_currency_id} onChange={(event) => setData('base_currency_id', event.target.value)} className="mt-1 w-full">
+                            <NativeSelect required value={data.base_currency_id} onChange={(event) => setData('base_currency_id', event.target.value)} className="mt-1 w-full">
                                 <NativeSelectOption value="">Select currency...</NativeSelectOption>
                                 {currencies.map((currency) => (
                                     <NativeSelectOption key={currency.id} value={String(currency.id)}>
@@ -155,7 +170,7 @@ export default function OrganizationSettings() {
                         </div>
                         <div>
                             <Label>Timezone *</Label>
-                            <NativeSelect value={data.timezone} onChange={(event) => setData('timezone', event.target.value)} className="mt-1 w-full">
+                            <NativeSelect required value={data.timezone} onChange={(event) => setData('timezone', event.target.value)} className="mt-1 w-full">
                                 {timezones.map((timezone) => (
                                     <NativeSelectOption key={timezone.value} value={timezone.value}>
                                         {timezone.label}
@@ -166,7 +181,7 @@ export default function OrganizationSettings() {
                         </div>
                         <div>
                             <Label>Fiscal Year Start Month *</Label>
-                            <NativeSelect value={data.fiscal_year_start_month} onChange={(event) => setData('fiscal_year_start_month', event.target.value)} className="mt-1 w-full">
+                            <NativeSelect required value={data.fiscal_year_start_month} onChange={(event) => setData('fiscal_year_start_month', event.target.value)} className="mt-1 w-full">
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
                                     <NativeSelectOption key={month} value={String(month)}>
                                         {new Date(2000, month - 1, 1).toLocaleString('en', { month: 'long' })}
@@ -190,6 +205,7 @@ export default function OrganizationSettings() {
                         <div>
                             <Label>Date Format</Label>
                             <Input value={data.date_format} onChange={(event) => setData('date_format', event.target.value)} className="mt-1" placeholder="Y-m-d" />
+                            {errors.date_format && <p className="mt-1 text-sm font-medium text-destructive">{errors.date_format}</p>}
                         </div>
                     </div>
                 </Card>
