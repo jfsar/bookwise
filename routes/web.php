@@ -1,12 +1,17 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FiscalYearController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PeriodClosingController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SessionController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -31,6 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/journal-entries', [JournalEntryController::class, 'store'])->name('journal-entries.store');
     Route::post('/journal-entries/{journalEntry}/submit', [JournalEntryController::class, 'submit'])->name('journal-entries.submit');
     Route::post('/journal-entries/{journalEntry}/approve', [JournalEntryController::class, 'approve'])->name('journal-entries.approve');
+    Route::post('/journal-entries/{journalEntry}/reject', [JournalEntryController::class, 'reject'])->name('journal-entries.reject');
     Route::post('/journal-entries/{journalEntry}/post', [JournalEntryController::class, 'post'])->name('journal-entries.post');
     Route::post('/journal-entries/{journalEntry}/reverse', [JournalEntryController::class, 'reverse'])->name('journal-entries.reverse');
     Route::post('/journal-entries/{journalEntry}/cancel', [JournalEntryController::class, 'cancel'])->name('journal-entries.cancel');
@@ -38,6 +44,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/period-closing', [PeriodClosingController::class, 'index'])->name('period-closing.index');
     Route::post('/accounting-periods/{accountingPeriod}/close', [PeriodClosingController::class, 'close'])->name('accounting-periods.close');
     Route::post('/accounting-periods/{accountingPeriod}/reopen', [PeriodClosingController::class, 'reopen'])->name('accounting-periods.reopen');
+
+    Route::get('/reports/general-ledger', [ReportController::class, 'generalLedger'])->name('reports.general-ledger');
+
+    Route::get('/settings/sessions', [SessionController::class, 'index'])->name('settings.sessions.index');
+    Route::delete('/settings/sessions/{session}', [SessionController::class, 'destroy'])->name('settings.sessions.destroy');
+    Route::delete('/settings/sessions', [SessionController::class, 'destroyOthers'])->name('settings.sessions.destroy-others');
+
+    Route::get('/settings/audit-logs', [AuditLogController::class, 'index'])->name('settings.audit-logs.index');
+
+    Route::get('/settings/organization', [OrganizationController::class, 'index'])->name('settings.organization.index');
+    Route::put('/organizations/{organization}', [OrganizationController::class, 'update'])->name('organizations.update');
+
+    Route::get('/settings/users', [UserController::class, 'index'])->name('settings.users.index');
+    Route::post('/settings/users', [UserController::class, 'store'])->name('settings.users.store');
+    Route::put('/settings/users/{user}', [UserController::class, 'update'])->name('settings.users.update');
+
+    Route::get('/settings/roles', [RoleController::class, 'index'])->name('settings.roles.index');
+    Route::post('/settings/roles', [RoleController::class, 'store'])->name('settings.roles.store');
+    Route::put('/settings/roles/{role}', [RoleController::class, 'update'])->name('settings.roles.update');
+    Route::delete('/settings/roles/{role}', [RoleController::class, 'destroy'])->name('settings.roles.destroy');
+    Route::get('/reports/trial-balance', [ReportController::class, 'trialBalance'])->name('reports.trial-balance');
+    Route::get('/reports/income-statement', [ReportController::class, 'incomeStatement'])->name('reports.income-statement');
+    Route::get('/reports/balance-sheet', [ReportController::class, 'balanceSheet'])->name('reports.balance-sheet');
+    Route::get('/reports/cash-flow', [ReportController::class, 'cashFlow'])->name('reports.cash-flow');
+    Route::post('/reports/export', [ReportController::class, 'store'])->name('reports.export');
+    Route::get('/reports/exports/{reportExport}', [ReportController::class, 'download'])->name('reports.download');
 
     Route::post('/organizations', [OrganizationController::class, 'store'])->name('organizations.store');
     Route::post('/organizations/switch/{organization}', [OrganizationController::class, 'switch'])->name('organizations.switch');

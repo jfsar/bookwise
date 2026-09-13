@@ -46,7 +46,7 @@ class JournalEntryActionsTest extends TestCase
         ], $org, $creator);
     }
 
-    private function attachRoleWithPermission(User $user, Organization $organization, string $permissionName): void
+    private function attachRoleWithPermission(User $user, Organization $organization, string|array $permissionNames): void
     {
         $user->organizations()->attach($organization->id, ['membership_status' => 'active']);
 
@@ -56,7 +56,7 @@ class JournalEntryActionsTest extends TestCase
             'is_global' => false,
         ]);
         $role->permissions()->attach(
-            Permission::firstOrCreate(['name' => $permissionName])
+            collect($permissionNames)->map(fn (string $name) => Permission::firstOrCreate(['name' => $name])->id)
         );
 
         $user->roles()->attach($role->id, ['organization_id' => $organization->id]);
@@ -86,6 +86,78 @@ class JournalEntryActionsTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame('submitted', $entry->fresh()->status->value);
+    }
+
+    public function test_reject_forbids_user_without_permission(): void
+    {
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+        $entry = $this->createDraftEntry($org, $user);
+
+        $this->actingAs($user)
+            ->post("/journal-entries/{$entry->id}/reject", ['reason' => 'No good'])
+            ->assertForbidden();
+    }
+
+    public function test_reject_requires_reason(): void
+    {
+        $org = Organization::factory()->create();
+        $submitter = User::factory()->create();
+        $this->attachRoleWithPermission($submitter, $org, 'submit-journal-entries');
+        $entry = $this->createDraftEntry($org, $submitter);
+
+        $this->actingAs($submitter)
+            ->post("/journal-entries/{$entry->id}/submit")
+            ->assertRedirect();
+
+        $rejecter = User::factory()->create();
+        $this->attachRoleWithPermission($rejecter, $org, 'reject-journal-entries');
+
+        $this->actingAs($rejecter)
+            ->post("/journal-entries/{$entry->id}/reject", ['reason' => ''])
+            ->assertRedirect()
+            ->assertSessionHasErrors('reason');
+
+        $this->assertSame('submitted', $entry->fresh()->status->value);
+    }
+
+    public function test_reject_forbids_submitter_approving_own_entry(): void
+    {
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+        $this->attachRoleWithPermission($user, $org, ['reject-journal-entries', 'submit-journal-entries']);
+        $entry = $this->createDraftEntry($org, $user);
+
+        $this->actingAs($user)
+            ->post("/journal-entries/{$entry->id}/submit")
+            ->assertRedirect();
+
+        $this->actingAs($user)
+            ->post("/journal-entries/{$entry->id}/reject", ['reason' => 'Sole user'])
+            ->assertForbidden();
+    }
+
+    public function test_reject_allows_user_with_permission(): void
+    {
+        $org = Organization::factory()->create();
+        $submitter = User::factory()->create();
+        $this->attachRoleWithPermission($submitter, $org, 'submit-journal-entries');
+        $entry = $this->createDraftEntry($org, $submitter);
+
+        $this->actingAs($submitter)
+            ->post("/journal-entries/{$entry->id}/submit")
+            ->assertRedirect();
+
+        $rejecter = User::factory()->create();
+        $this->attachRoleWithPermission($rejecter, $org, 'reject-journal-entries');
+
+        $this->actingAs($rejecter)
+            ->post("/journal-entries/{$entry->id}/reject", ['reason' => 'Missing support'])
+            ->assertRedirect();
+
+        $refreshed = $entry->fresh();
+        $this->assertSame('rejected', $refreshed->status->value);
+        $this->assertSame('Missing support', $refreshed->rejection_reason);
     }
 
     public function test_http_store_creates_draft_entry(): void

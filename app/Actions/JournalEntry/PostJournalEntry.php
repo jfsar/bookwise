@@ -4,8 +4,10 @@ namespace App\Actions\JournalEntry;
 
 use App\Actions\Action;
 use App\Enums\JournalEntryStatus;
+use App\Events\JournalPosted;
 use App\Models\JournalEntry;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 
 class PostJournalEntry
@@ -34,7 +36,21 @@ class PostJournalEntry
                 'posted_at' => now(),
             ]);
 
-            return $entry->fresh();
+            $entry = $entry->fresh();
+
+            app(AuditLogService::class)->record(
+                $entry->organization,
+                $poster->id,
+                'journal-entry.posted',
+                JournalEntry::class,
+                $entry->id,
+                ['status' => 'approved'],
+                ['status' => 'posted']
+            );
+
+            DB::afterCommit(fn () => JournalPosted::dispatch($entry->organization_id));
+
+            return $entry;
         });
     }
 

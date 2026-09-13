@@ -25,6 +25,8 @@ class StoreAccountRequest extends FormRequest
             'account_type_id' => ['required', 'exists:account_types,id'],
             'parent_id' => ['nullable', 'integer'],
             'normal_balance' => ['required', 'string', 'in:debit,credit'],
+            'cash_flow_section' => ['nullable', 'string', 'in:operating,investing,financing'],
+            'is_cash_account' => ['boolean'],
             'is_posting_account' => ['boolean'],
             'is_active' => ['boolean'],
             'allow_manual_posting' => ['boolean'],

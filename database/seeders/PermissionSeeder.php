@@ -20,6 +20,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'create-journal-entries', 'description' => 'Create and save draft journal entries.'],
             ['name' => 'submit-journal-entries', 'description' => 'Submit journal entries for approval.'],
             ['name' => 'approve-journal-entries', 'description' => 'Approve submitted journal entries.'],
+            ['name' => 'reject-journal-entries', 'description' => 'Reject submitted journal entries.'],
             ['name' => 'post-journal-entries', 'description' => 'Post approved journal entries to the ledger.'],
             ['name' => 'reverse-journal-entries', 'description' => 'Reverse posted journal entries.'],
             ['name' => 'cancel-journal-entries', 'description' => 'Cancel draft or submitted journal entries.'],

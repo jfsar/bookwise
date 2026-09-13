@@ -7,6 +7,7 @@ use App\Enums\JournalEntryStatus;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 
 class ReverseJournalEntry
@@ -65,6 +66,16 @@ class ReverseJournalEntry
                 'reversed_at' => now(),
                 'reversal_reason' => $reason,
             ]);
+
+            app(AuditLogService::class)->record(
+                $entry->organization,
+                $reverser->id,
+                'journal-entry.reversed',
+                JournalEntry::class,
+                $entry->id,
+                ['status' => 'posted'],
+                ['status' => 'reversed']
+            );
 
             return $reversalEntry;
         });

@@ -57,6 +57,10 @@ export default function JournalEntriesIndex() {
         setConfirm({ open: true, entry, mode: 'reverse' });
     }
 
+    function openReject(entry) {
+        setConfirm({ open: true, entry, mode: 'reject' });
+    }
+
     function openCancel(entry) {
         setConfirm({ open: true, entry, mode: 'cancel' });
     }
@@ -139,6 +143,16 @@ export default function JournalEntriesIndex() {
                                                     onClick={() => router.post(`/journal-entries/${entry.id}/approve`)}
                                                 >
                                                     Approve
+                                                </Button>
+                                            )}
+                                            {entry.can.reject && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                    onClick={() => openReject(entry)}
+                                                >
+                                                    Reject
                                                 </Button>
                                             )}
                                             {entry.can.post && (

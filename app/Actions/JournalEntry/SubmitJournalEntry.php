@@ -6,6 +6,7 @@ use App\Actions\Action;
 use App\Enums\JournalEntryStatus;
 use App\Models\JournalEntry;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 
 class SubmitJournalEntry
@@ -28,6 +29,16 @@ class SubmitJournalEntry
                 'submitted_by' => $submitter->id,
                 'submitted_at' => now(),
             ]);
+
+            app(AuditLogService::class)->record(
+                $entry->organization,
+                $submitter->id,
+                'journal-entry.submitted',
+                JournalEntry::class,
+                $entry->id,
+                ['status' => 'draft'],
+                ['status' => 'submitted']
+            );
 
             return $entry->fresh();
         });

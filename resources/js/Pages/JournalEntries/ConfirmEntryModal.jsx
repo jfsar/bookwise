@@ -10,6 +10,24 @@ import {
 } from '@/Components/ui/dialog';
 import { Textarea } from '@/Components/ui/textarea';
 
+const labels = {
+    reject: {
+        title: 'Reject Journal Entry',
+        placeholder: 'Explain why this entry is being rejected...',
+        action: 'Reject Entry',
+    },
+    reverse: {
+        title: 'Reverse Journal Entry',
+        placeholder: 'Explain why this entry is being reversed...',
+        action: 'Reverse Entry',
+    },
+    cancel: {
+        title: 'Cancel Journal Entry',
+        placeholder: 'Explain why this entry is being cancelled...',
+        action: 'Cancel Entry',
+    },
+};
+
 export default function ConfirmEntryModal({ open, mode, entry, onClose }) {
     const { data, setData, errors, post, processing, reset } = useForm({
         reason: '',
@@ -26,12 +44,14 @@ export default function ConfirmEntryModal({ open, mode, entry, onClose }) {
         });
     }
 
+    const text = labels[mode] ?? labels.reverse;
+
     return (
         <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
             <DialogContent className="sm:max-w-sm">
                 <DialogHeader>
                     <DialogTitle className="font-display">
-                        {mode === 'reverse' ? 'Reverse Journal Entry' : 'Cancel Journal Entry'}
+                        {text.title}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -43,7 +63,7 @@ export default function ConfirmEntryModal({ open, mode, entry, onClose }) {
                             value={data.reason}
                             onChange={(event) => setData('reason', event.target.value)}
                             className="mt-1"
-                            placeholder={mode === 'reverse' ? 'Explain why this entry is being reversed...' : 'Explain why this entry is being cancelled...'}
+                            placeholder={text.placeholder}
                         />
                         {errors.reason && <p className="mt-1 text-sm font-medium text-destructive">{errors.reason}</p>}
                     </div>
@@ -53,7 +73,7 @@ export default function ConfirmEntryModal({ open, mode, entry, onClose }) {
                             Cancel
                         </Button>
                         <Button type="submit" variant="destructive" disabled={processing}>
-                            {mode === 'reverse' ? 'Reverse Entry' : 'Cancel Entry'}
+                            {text.action}
                         </Button>
                     </div>
                 </form>

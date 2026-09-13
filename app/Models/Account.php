@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CashFlowSection;
 use App\Enums\NormalBalance;
 use App\Models\Concerns\HasUlidIdentifier;
 use Database\Factories\AccountFactory;
@@ -44,6 +45,8 @@ class Account extends Model
         'description',
         'normal_balance',
         'account_category',
+        'cash_flow_section',
+        'is_cash_account',
         'is_posting_account',
         'is_system_account',
         'is_active',
@@ -57,6 +60,8 @@ class Account extends Model
     {
         return [
             'normal_balance' => NormalBalance::class,
+            'cash_flow_section' => CashFlowSection::class,
+            'is_cash_account' => 'boolean',
             'is_posting_account' => 'boolean',
             'is_system_account' => 'boolean',
             'is_active' => 'boolean',
