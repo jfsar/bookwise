@@ -12,7 +12,7 @@ export default function ConfirmPassword() {
 
     function submit(event) {
         event.preventDefault();
-        post('/password/confirm');
+        post('/user/confirm-password');
     }
 
     return (

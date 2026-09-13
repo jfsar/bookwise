@@ -21,6 +21,10 @@ class PostJournalEntry
                 throw new \RuntimeException('Only approved entries can be posted.');
             }
 
+            if ($entry->created_by === $poster->id) {
+                throw new \RuntimeException('Maker-checker: The final poster cannot be the same person who created the entry.');
+            }
+
             if (! $entry->isBalanced()) {
                 throw new \RuntimeException('Cannot post an unbalanced entry. Debits must equal credits.');
             }

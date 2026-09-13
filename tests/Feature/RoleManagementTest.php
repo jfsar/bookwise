@@ -36,8 +36,10 @@ class RoleManagementTest extends TestCase
         $user = User::factory()->create();
         $user->organizations()->attach($organization->id, ['membership_status' => 'active']);
 
-        $this->actingAs($user)
-            ->post('/settings/roles', ['name' => 'Custom Role'])
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->post('/settings/roles', ['name' => 'Custom Role'])
             ->assertForbidden();
     }
 
@@ -51,11 +53,13 @@ class RoleManagementTest extends TestCase
         $view = $this->createPermission('view-accounts');
         $create = $this->createPermission('create-accounts');
 
-        $this->actingAs($user)
-            ->post('/settings/roles', [
-                'name' => 'Custom Role',
-                'permission_ids' => [$view->id, $create->id],
-            ])
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->post('/settings/roles', [
+            'name' => 'Custom Role',
+            'permission_ids' => [$view->id, $create->id],
+        ])
             ->assertRedirect();
 
         $role = Role::where('slug', 'custom-role')->where('organization_id', $organization->id)->first();
@@ -83,11 +87,13 @@ class RoleManagementTest extends TestCase
 
         $other = $this->createPermission('view-reports');
 
-        $this->actingAs($user)
-            ->put("/settings/roles/{$role->id}", [
-                'name' => 'Updated Role',
-                'permission_ids' => [$other->id],
-            ])
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->put("/settings/roles/{$role->id}", [
+            'name' => 'Updated Role',
+            'permission_ids' => [$other->id],
+        ])
             ->assertRedirect();
 
         $fresh = $role->fresh();
@@ -109,8 +115,10 @@ class RoleManagementTest extends TestCase
             'is_global' => true,
         ]);
 
-        $this->actingAs($user)
-            ->delete("/settings/roles/{$role->id}")
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->delete("/settings/roles/{$role->id}")
             ->assertForbidden();
 
         $this->assertDatabaseHas('roles', ['id' => $role->id]);
@@ -130,8 +138,10 @@ class RoleManagementTest extends TestCase
             'is_global' => false,
         ]);
 
-        $this->actingAs($user)
-            ->delete("/settings/roles/{$role->id}")
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->delete("/settings/roles/{$role->id}")
             ->assertRedirect();
 
         $this->assertDatabaseMissing('roles', ['id' => $role->id]);

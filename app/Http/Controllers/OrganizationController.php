@@ -42,7 +42,7 @@ class OrganizationController extends Controller
     {
         $user = $request->user();
 
-        (new CreateOrganization)->run($request->validated(), $user);
+        (new CreateOrganization)->handle($request->validated(), $user);
 
         return back()->with('success', 'Organization created successfully.');
     }

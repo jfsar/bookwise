@@ -102,6 +102,20 @@ class JournalEntryTest extends TestCase
         (new ApproveJournalEntry)->handle($entry, $user);
     }
 
+    public function test_maker_checker_prevents_creator_posting(): void
+    {
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+
+        $entry = $this->createEntry($org, $user);
+        $entry->update(['status' => 'approved']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Maker-checker: The final poster cannot be the same person who created the entry.');
+
+        (new PostJournalEntry)->handle($entry, $user);
+    }
+
     public function test_cannot_submit_unbalanced_entry(): void
     {
         $org = Organization::factory()->create();
@@ -166,6 +180,7 @@ class JournalEntryTest extends TestCase
         $org = Organization::factory()->create();
         $user = User::factory()->create();
         $approver = User::factory()->create();
+        $poster = User::factory()->create();
 
         $entry = $this->createEntry($org, $user);
 
@@ -177,7 +192,7 @@ class JournalEntryTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Cannot post to a closed accounting period.');
 
-        (new PostJournalEntry)->handle($entry, $user);
+        (new PostJournalEntry)->handle($entry, $poster);
     }
 
     public function test_cancel_draft_entry(): void

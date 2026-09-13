@@ -103,7 +103,8 @@ class ReportsTest extends TestCase
         ], $org, $user);
 
         $entry->update(['status' => 'approved']);
-        (new PostJournalEntry)->handle($entry, $user);
+        $poster = User::factory()->create();
+        (new PostJournalEntry)->handle($entry, $poster);
 
         return ['org' => $org, 'user' => $user, 'entry' => $entry, 'accounts' => $accounts];
     }
@@ -231,11 +232,13 @@ class ReportsTest extends TestCase
         Queue::fake();
         $ledger = $this->seedLedger();
 
-        $this->actingAs($ledger['user'])
-            ->post('/reports/export', [
-                'report_type' => 'trial-balance',
-                'account_id' => $ledger['accounts']['cash']->id,
-            ])
+        $this->actingAs($ledger['user']);
+        $this->confirmPassword();
+
+        $this->post('/reports/export', [
+            'report_type' => 'trial-balance',
+            'account_id' => $ledger['accounts']['cash']->id,
+        ])
             ->assertRedirect()
             ->assertSessionHas('success');
 
@@ -291,8 +294,10 @@ class ReportsTest extends TestCase
         ]);
         Storage::disk('local')->put('reports/1.csv', 'code,name');
 
-        $this->actingAs($user)
-            ->get("/reports/exports/{$export->id}")
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->get("/reports/exports/{$export->id}")
             ->assertOk()
             ->assertDownload('trial-balance.csv');
     }
@@ -324,8 +329,10 @@ class ReportsTest extends TestCase
         $intruder->organizations()->attach($intruderOrg->id, ['membership_status' => 'active']);
         $this->grantPermission($intruder, $intruderOrg, 'view-reports');
 
-        $this->actingAs($intruder)
-            ->get("/reports/exports/{$export->id}")
+        $this->actingAs($intruder);
+        $this->confirmPassword();
+
+        $this->get("/reports/exports/{$export->id}")
             ->assertForbidden();
     }
 
@@ -380,7 +387,8 @@ class ReportsTest extends TestCase
         ], $org, $user);
 
         $entry->update(['status' => 'approved']);
-        (new PostJournalEntry)->handle($entry, $user);
+        $poster = User::factory()->create();
+        (new PostJournalEntry)->handle($entry, $poster);
 
         return ['org' => $org, 'user' => $user];
     }

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Inertia\Testing\AssertableInertia;
+use PragmaRX\Google2FA\Google2FA;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -132,6 +133,46 @@ class AuthenticationTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertGuest();
+    }
+
+    public function test_user_with_enabled_two_factor_must_complete_the_challenge_before_login(): void
+    {
+        $user = User::factory()->create(['email' => 'twofa@example.com']);
+        $user->forceFill([
+            'two_factor_secret' => 'plain-secret-value',
+            'two_factor_confirmed_at' => now(),
+        ])->save();
+
+        $this->post('/login', [
+            'email' => 'twofa@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/two-factor-challenge');
+
+        $this->assertGuest();
+        $this->assertSame($user->id, session('login.id'));
+    }
+
+    public function test_user_can_finish_login_with_a_valid_two_factor_code(): void
+    {
+        $google2fa = app(Google2FA::class);
+        $secret = $google2fa->generateSecretKey();
+        $user = User::factory()->create(['email' => 'gina@example.com']);
+        $user->forceFill([
+            'two_factor_secret' => app('encrypter')->encrypt($secret),
+            'two_factor_confirmed_at' => now(),
+        ])->save();
+
+        $this->post('/login', [
+            'email' => 'gina@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/two-factor-challenge');
+
+        $code = $google2fa->getCurrentOtp($secret);
+
+        $this->post('/two-factor-challenge', ['code' => $code])
+            ->assertRedirect('/dashboard');
+
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_unverified_users_are_redirected_to_email_verification(): void

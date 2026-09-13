@@ -23,11 +23,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
-    Route::post('/accounts', [AccountController::class, 'store'])->name('accounts.store');
-    Route::put('/accounts/{account}', [AccountController::class, 'update'])->name('accounts.update');
+    Route::post('/accounts', [AccountController::class, 'store'])->name('accounts.store')->middleware('password.confirm');
+    Route::put('/accounts/{account}', [AccountController::class, 'update'])->name('accounts.update')->middleware('password.confirm');
 
     Route::get('/fiscal-years', [FiscalYearController::class, 'index'])->name('fiscal-years.index');
-    Route::post('/fiscal-years', [FiscalYearController::class, 'store'])->name('fiscal-years.store');
+    Route::post('/fiscal-years', [FiscalYearController::class, 'store'])->name('fiscal-years.store')->middleware('password.confirm');
 
     Route::get('/journals', [JournalController::class, 'index'])->name('journals.index');
     Route::post('/journals', [JournalController::class, 'store'])->name('journals.store');
@@ -42,8 +42,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/journal-entries/{journalEntry}/cancel', [JournalEntryController::class, 'cancel'])->name('journal-entries.cancel');
 
     Route::get('/period-closing', [PeriodClosingController::class, 'index'])->name('period-closing.index');
-    Route::post('/accounting-periods/{accountingPeriod}/close', [PeriodClosingController::class, 'close'])->name('accounting-periods.close');
-    Route::post('/accounting-periods/{accountingPeriod}/reopen', [PeriodClosingController::class, 'reopen'])->name('accounting-periods.reopen');
+    Route::post('/accounting-periods/{accountingPeriod}/close', [PeriodClosingController::class, 'close'])->name('accounting-periods.close')->middleware('password.confirm');
+    Route::post('/accounting-periods/{accountingPeriod}/reopen', [PeriodClosingController::class, 'reopen'])->name('accounting-periods.reopen')->middleware('password.confirm');
 
     Route::get('/reports/general-ledger', [ReportController::class, 'generalLedger'])->name('reports.general-ledger');
 
@@ -54,22 +54,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/settings/audit-logs', [AuditLogController::class, 'index'])->name('settings.audit-logs.index');
 
     Route::get('/settings/organization', [OrganizationController::class, 'index'])->name('settings.organization.index');
-    Route::put('/organizations/{organization}', [OrganizationController::class, 'update'])->name('organizations.update');
+    Route::put('/organizations/{organization}', [OrganizationController::class, 'update'])->name('organizations.update')->middleware('password.confirm');
 
     Route::get('/settings/users', [UserController::class, 'index'])->name('settings.users.index');
-    Route::post('/settings/users', [UserController::class, 'store'])->name('settings.users.store');
-    Route::put('/settings/users/{user}', [UserController::class, 'update'])->name('settings.users.update');
+    Route::post('/settings/users', [UserController::class, 'store'])->name('settings.users.store')->middleware('password.confirm');
+    Route::put('/settings/users/{user}', [UserController::class, 'update'])->name('settings.users.update')->middleware('password.confirm');
 
     Route::get('/settings/roles', [RoleController::class, 'index'])->name('settings.roles.index');
-    Route::post('/settings/roles', [RoleController::class, 'store'])->name('settings.roles.store');
-    Route::put('/settings/roles/{role}', [RoleController::class, 'update'])->name('settings.roles.update');
-    Route::delete('/settings/roles/{role}', [RoleController::class, 'destroy'])->name('settings.roles.destroy');
+    Route::post('/settings/roles', [RoleController::class, 'store'])->name('settings.roles.store')->middleware('password.confirm');
+    Route::put('/settings/roles/{role}', [RoleController::class, 'update'])->name('settings.roles.update')->middleware('password.confirm');
+    Route::delete('/settings/roles/{role}', [RoleController::class, 'destroy'])->name('settings.roles.destroy')->middleware('password.confirm');
     Route::get('/reports/trial-balance', [ReportController::class, 'trialBalance'])->name('reports.trial-balance');
     Route::get('/reports/income-statement', [ReportController::class, 'incomeStatement'])->name('reports.income-statement');
     Route::get('/reports/balance-sheet', [ReportController::class, 'balanceSheet'])->name('reports.balance-sheet');
     Route::get('/reports/cash-flow', [ReportController::class, 'cashFlow'])->name('reports.cash-flow');
-    Route::post('/reports/export', [ReportController::class, 'store'])->name('reports.export');
-    Route::get('/reports/exports/{reportExport}', [ReportController::class, 'download'])->name('reports.download');
+    Route::post('/reports/export', [ReportController::class, 'store'])->name('reports.export')->middleware('password.confirm');
+    Route::get('/reports/exports/{reportExport}', [ReportController::class, 'download'])->name('reports.download')->middleware('password.confirm');
 
     Route::post('/organizations', [OrganizationController::class, 'store'])->name('organizations.store');
     Route::post('/organizations/switch/{organization}', [OrganizationController::class, 'switch'])->name('organizations.switch');
