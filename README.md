@@ -3,7 +3,7 @@
 > A production-style, modular Laravel accounting application built around a reliable double-entry general ledger.
 
 **Application type:** Server-rendered Laravel modular monolith  
-**Frontend:** Blade + Livewire + Tailwind CSS  
+**Frontend:** Inertia + React + Tailwind CSS  
 **Backend:** Laravel / PHP  
 **Database:** PostgreSQL  
 **Cache & queues:** Redis  
