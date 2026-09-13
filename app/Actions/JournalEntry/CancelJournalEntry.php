@@ -4,8 +4,10 @@ namespace App\Actions\JournalEntry;
 
 use App\Actions\Action;
 use App\Enums\JournalEntryStatus;
+use App\Models\ApprovalRequest;
 use App\Models\JournalEntry;
 use App\Models\User;
+use App\Services\ApprovalWorkflowService;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 
@@ -21,6 +23,11 @@ class CancelJournalEntry
             }
 
             $previousStatus = $entry->status->value;
+
+            ApprovalRequest::forSubject($entry)
+                ->open()
+                ->get()
+                ->each(fn (ApprovalRequest $request) => app(ApprovalWorkflowService::class)->cancel($request, $canceller, $reason));
 
             $entry->update([
                 'status' => JournalEntryStatus::Cancelled,

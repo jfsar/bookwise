@@ -6,6 +6,7 @@ use App\Actions\Action;
 use App\Enums\JournalEntryStatus;
 use App\Models\JournalEntry;
 use App\Models\User;
+use App\Services\ApprovalWorkflowService;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 
@@ -38,6 +39,12 @@ class SubmitJournalEntry
                 $entry->id,
                 ['status' => 'draft'],
                 ['status' => 'submitted']
+            );
+
+            app(ApprovalWorkflowService::class)->createRequest(
+                $entry,
+                $submitter,
+                $entry->approvalTransactionType()
             );
 
             return $entry->fresh();
