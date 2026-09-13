@@ -137,7 +137,8 @@ class DashboardTest extends TestCase
         ], $org, $user);
 
         $entry->update(['status' => 'approved']);
-        (new PostJournalEntry)->handle($entry, $user);
+        $poster = User::factory()->create();
+        (new PostJournalEntry)->handle($entry, $poster);
     }
 
     private function seedInvoice(Organization $org, User $user, float $balanceDue, string $dueDate, int $receivableAccountId): void
@@ -286,7 +287,8 @@ class DashboardTest extends TestCase
         ], $seeded['org'], $seeded['user']);
 
         $entry->update(['status' => 'approved']);
-        (new PostJournalEntry)->handle($entry, $seeded['user']);
+        $poster = User::factory()->create();
+        (new PostJournalEntry)->handle($entry, $poster);
 
         $this->assertNull(Cache::get($key));
 

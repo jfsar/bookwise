@@ -160,6 +160,62 @@ class JournalEntryActionsTest extends TestCase
         $this->assertSame('Missing support', $refreshed->rejection_reason);
     }
 
+    public function test_post_forbids_creator_with_permission(): void
+    {
+        $org = Organization::factory()->create();
+        $creator = User::factory()->create();
+        $this->attachRoleWithPermission($creator, $org, [
+            'submit-journal-entries',
+            'post-journal-entries',
+        ]);
+        $entry = $this->createDraftEntry($org, $creator);
+
+        $approver = User::factory()->create();
+        $this->attachRoleWithPermission($approver, $org, 'approve-journal-entries');
+
+        $this->actingAs($creator)
+            ->post("/journal-entries/{$entry->id}/submit")
+            ->assertRedirect();
+
+        $this->actingAs($approver)
+            ->post("/journal-entries/{$entry->id}/approve")
+            ->assertRedirect();
+
+        $this->actingAs($creator)
+            ->post("/journal-entries/{$entry->id}/post")
+            ->assertForbidden();
+
+        $this->assertSame('approved', $entry->fresh()->status->value);
+    }
+
+    public function test_post_allows_non_creator_with_permission(): void
+    {
+        $org = Organization::factory()->create();
+        $creator = User::factory()->create();
+        $this->attachRoleWithPermission($creator, $org, 'submit-journal-entries');
+        $entry = $this->createDraftEntry($org, $creator);
+
+        $approver = User::factory()->create();
+        $this->attachRoleWithPermission($approver, $org, 'approve-journal-entries');
+
+        $this->actingAs($creator)
+            ->post("/journal-entries/{$entry->id}/submit")
+            ->assertRedirect();
+
+        $this->actingAs($approver)
+            ->post("/journal-entries/{$entry->id}/approve")
+            ->assertRedirect();
+
+        $poster = User::factory()->create();
+        $this->attachRoleWithPermission($poster, $org, 'post-journal-entries');
+
+        $this->actingAs($poster)
+            ->post("/journal-entries/{$entry->id}/post")
+            ->assertRedirect();
+
+        $this->assertSame('posted', $entry->fresh()->status->value);
+    }
+
     public function test_http_store_creates_draft_entry(): void
     {
         $org = Organization::factory()->create();

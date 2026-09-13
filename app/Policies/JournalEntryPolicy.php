@@ -58,7 +58,8 @@ class JournalEntryPolicy
     public function post(User $user, JournalEntry $journalEntry): bool
     {
         return $user->hasPermissionTo('post-journal-entries', $journalEntry->organization)
-            && $journalEntry->status->value === 'approved';
+            && $journalEntry->status->value === 'approved'
+            && $journalEntry->created_by !== $user->id;
     }
 
     public function reverse(User $user, JournalEntry $journalEntry): bool
