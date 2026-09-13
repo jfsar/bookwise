@@ -103,7 +103,7 @@ class ApprovalWorkflowTest extends TestCase
     private function entry(Organization $organization, User $creator, int $amount = 500): JournalEntry
     {
         $journal = Journal::factory()->create(['organization_id' => $organization->id]);
-        $currency = Currency::factory()->create(['code' => 'USD']);
+        $currency = Currency::factory()->create();
         $fiscalYear = FiscalYear::factory()->create(['organization_id' => $organization->id]);
         $period = AccountingPeriod::factory()->create([
             'organization_id' => $organization->id,
