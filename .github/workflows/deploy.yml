@@ -16,7 +16,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     environment: production
 
     services:
@@ -36,9 +36,33 @@ jobs:
 
     steps:
       - name: Validate required secrets
+        env:
+          APP_KEY: ${{ secrets.APP_KEY }}
+          WASMER_TOKEN: ${{ secrets.WASMER_TOKEN }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_HOST_DIRECT: ${{ secrets.DB_HOST_DIRECT }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          REDIS_HOST: ${{ secrets.REDIS_HOST }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT: ${{ secrets.AWS_ENDPOINT }}
         run: |
-          if [ -z "${{ secrets.APP_KEY }}" ]; then
-            echo "::error::APP_KEY secret is not set. Generate one locally with 'php artisan key:generate --show' and add it as a repo secret before deploying." >&2
+          missing=()
+          for secret in APP_KEY WASMER_TOKEN DB_HOST DB_HOST_DIRECT DB_DATABASE DB_USERNAME DB_PASSWORD REDIS_HOST REDIS_PASSWORD MAIL_USERNAME MAIL_PASSWORD AWS_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_ENDPOINT; do
+            value="${!secret}"
+            if [ -z "$value" ]; then
+              missing+=("$secret")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${missing[*]}" >&2
+            echo "Add them as GitHub Actions secrets in the repository or environment settings." >&2
             exit 1
           fi
 
@@ -118,10 +142,17 @@ jobs:
           export PATH="$HOME/.wasmer/bin:$PATH"
           wasmer login "$WASMER_TOKEN"
 
+      - name: Deploy to Wasmer
+        env:
+          WASMER_TOKEN: ${{ secrets.WASMER_TOKEN }}
+        run: |
+          export PATH="$HOME/.wasmer/bin:$PATH"
+          wasmer deploy --non-interactive
+
       - name: Run production database migrations
         env:
           DB_HOST_DIRECT: ${{ secrets.DB_HOST_DIRECT }}
-          DB_PORT: "5432"
+          DB_PORT: ${{ secrets.DB_PORT || '5432' }}
           DB_DATABASE: ${{ secrets.DB_DATABASE }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -129,23 +160,16 @@ jobs:
           APP_KEY: ${{ secrets.APP_KEY }}
         run: php artisan migrate --force --database=pgsql_direct
 
-      - name: Seed production database (admin user, roles, permissions)
+      - name: Seed production database (idempotent reference data)
         env:
           DB_HOST_DIRECT: ${{ secrets.DB_HOST_DIRECT }}
-          DB_PORT: "5432"
+          DB_PORT: ${{ secrets.DB_PORT || '5432' }}
           DB_DATABASE: ${{ secrets.DB_DATABASE }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_SSLMODE: require
           APP_KEY: ${{ secrets.APP_KEY }}
         run: php artisan db:seed --force --no-interaction --database=pgsql_direct
-
-      - name: Deploy to Wasmer
-        env:
-          WASMER_TOKEN: ${{ secrets.WASMER_TOKEN }}
-        run: |
-          export PATH="$HOME/.wasmer/bin:$PATH"
-          wasmer deploy --non-interactive
 
       - name: Sync secrets to Wasmer
         env:
@@ -156,6 +180,10 @@ jobs:
           sync_secret() {
             local name="$1"
             local value="$2"
+            if [ -z "$value" ]; then
+              echo "::warning::Skipping empty secret: $name"
+              return 0
+            fi
             wasmer app secrets update "$name" "$value" || \
             wasmer app secrets create "$name" "$value"
           }
@@ -184,5 +212,17 @@ jobs:
 
       - name: Health check
         run: |
-          sleep 5
-          curl -sSf "${{ vars.APP_URL }}/up"
+          if [ -z "${{ vars.APP_URL }}" ]; then
+            echo "::error::APP_URL variable is not set. Add it in the 'production' environment settings." >&2
+            exit 1
+          fi
+          for i in 1 2 3 4 5 6; do
+            if curl -sSf --max-time 15 "${{ vars.APP_URL }}/up"; then
+              echo "Health check passed."
+              exit 0
+            fi
+            echo "Attempt $i failed. Retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Health check failed after 6 attempts." >&2
+          exit 1

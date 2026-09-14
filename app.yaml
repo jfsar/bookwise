@@ -8,7 +8,7 @@
 
 kind: wasmer.io/App.v0
 owner: jfsar # TODO: replace with your Wasmer namespace/username
-name: numeriq
+name: bookwise
 package: . # TODO: match owner above
 debug: true
 
@@ -17,7 +17,15 @@ jobs:
     trigger: "* * * * *"
     action:
       execute:
-        command: queue-worker
+        command: php
+        cli_args:
+          [
+            "/app/artisan",
+            "queue:work",
+            "--stop-when-empty",
+            "--tries=3",
+            "--timeout=600",
+          ]
         timeout: 10m
 
 env:

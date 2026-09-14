@@ -49,12 +49,12 @@ class PermissionSeeder extends Seeder
     {
         $admin = Role::where('slug', 'admin')->first();
         if ($admin) {
-            $admin->permissions()->sync(Permission::all());
+            $admin->permissions()->syncWithoutDetaching(Permission::all());
         }
 
         $manager = Role::where('slug', 'manager')->first();
         if ($manager) {
-            $manager->permissions()->sync(Permission::whereNotIn('name', [
+            $manager->permissions()->syncWithoutDetaching(Permission::whereNotIn('name', [
                 'manage-users',
                 'manage-settings',
             ])->get());
@@ -62,7 +62,7 @@ class PermissionSeeder extends Seeder
 
         $accountant = Role::where('slug', 'accountant')->first();
         if ($accountant) {
-            $accountant->permissions()->sync(Permission::whereIn('name', [
+            $accountant->permissions()->syncWithoutDetaching(Permission::whereIn('name', [
                 'view-dashboard',
                 'view-accounts',
                 'create-accounts',
@@ -78,7 +78,7 @@ class PermissionSeeder extends Seeder
 
         $auditor = Role::where('slug', 'auditor')->first();
         if ($auditor) {
-            $auditor->permissions()->sync(Permission::whereIn('name', [
+            $auditor->permissions()->syncWithoutDetaching(Permission::whereIn('name', [
                 'view-dashboard',
                 'view-accounts',
                 'view-journal-entries',
@@ -91,7 +91,7 @@ class PermissionSeeder extends Seeder
 
         $viewer = Role::where('slug', 'viewer')->first();
         if ($viewer) {
-            $viewer->permissions()->sync(Permission::whereIn('name', [
+            $viewer->permissions()->syncWithoutDetaching(Permission::whereIn('name', [
                 'view-dashboard',
                 'view-reports',
             ])->get());

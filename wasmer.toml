@@ -10,10 +10,3 @@ module = "php/php:php"
 runner = "wasi"
 [command.annotations.wasi]
 main-args = ["-t", "/app/public", "-S", "localhost:8080"]
-
-[[command]]
-name = "queue-worker"
-module = "php/php:php"
-runner = "wasi"
-[command.annotations.wasi]
-main-args = ["/app/artisan", "queue:work", "--stop-when-empty", "--tries=3", "--timeout=600"]
