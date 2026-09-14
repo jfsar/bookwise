@@ -17,7 +17,15 @@ jobs:
     trigger: "* * * * *"
     action:
       execute:
-        command: queue-worker
+        command: php
+        cli_args:
+          [
+            "/app/artisan",
+            "queue:work",
+            "--stop-when-empty",
+            "--tries=3",
+            "--timeout=600",
+          ]
         timeout: 10m
 
 env:
