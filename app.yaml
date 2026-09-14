@@ -12,6 +12,15 @@ name: bookwise
 package: . # TODO: match owner above
 debug: false
 
+jobs:
+  - name: queue-worker
+    trigger: "* * * * *"
+    action:
+      execute:
+        command: php
+        cli_args: ["artisan", "queue:work", "--stop-when-empty", "--tries=3", "--timeout=600"]
+        timeout: 10m
+
 env:
   APP_NAME: BookWise
   APP_ENV: production

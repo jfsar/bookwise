@@ -9,6 +9,20 @@ use Illuminate\Support\Facades\DB;
 class AuditLogService
 {
     /**
+     * Connection that hosts the audit log chain.
+     *
+     * Normal requests bypass the Neon pooler (which can leave a pooled
+     * connection in a "current transaction is aborted" state after a
+     * failed statement) and write directly. Under tests the default
+     * connection is already pgsql_testing, which RefreshDatabase wraps
+     * in a transaction, so writes must stay on it for isolation.
+     */
+    private function connection(): string
+    {
+        return config('database.default') === 'pgsql_testing' ? 'pgsql_testing' : 'pgsql_direct';
+    }
+
+    /**
      * Record an audit log entry with a tamper-evident hash chain per organization.
      *
      * @param  array<string, mixed>|null  $oldValues
@@ -23,8 +37,9 @@ class AuditLogService
         ?array $oldValues = null,
         ?array $newValues = null,
     ): AuditLog {
-        return DB::transaction(function () use ($organization, $userId, $action, $auditableType, $auditableId, $oldValues, $newValues) {
-            $previous = AuditLog::where('organization_id', $organization->id)
+        return DB::connection($this->connection())->transaction(function () use ($organization, $userId, $action, $auditableType, $auditableId, $oldValues, $newValues) {
+            $previous = AuditLog::on($this->connection())
+                ->where('organization_id', $organization->id)
                 ->orderByDesc('sequence_no')
                 ->lockForUpdate()
                 ->first();
@@ -47,6 +62,7 @@ class AuditLogService
             $recordHash = hash('sha256', $previousHash.$payload);
 
             $log = new AuditLog;
+            $log->setConnection($this->connection());
             $log->fill([
                 'organization_id' => $organization->id,
                 'user_id' => $userId,
@@ -82,7 +98,7 @@ class AuditLogService
         $expectedSequence = 1;
         $expectedPreviousHash = str_repeat('0', 64);
 
-        foreach (AuditLog::query()
+        foreach (AuditLog::on($this->connection())
             ->where('organization_id', $organization->id)
             ->orderBy('sequence_no')
             ->cursor() as $log) {
