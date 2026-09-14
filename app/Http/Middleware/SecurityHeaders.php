@@ -22,7 +22,6 @@ class SecurityHeaders
 
         $response = $next($request);
 
-        $response->headers->remove('X-Powered-By');
         $response->headers->set('Content-Security-Policy', $this->contentSecurityPolicy());
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
@@ -41,7 +40,7 @@ class SecurityHeaders
 
         if (Vite::isRunningHot()) {
             $origin = rtrim(Vite::devServerUrl(), '/');
-            $websocket = 'ws'.substr($origin, 4);
+            $websocket = preg_replace('/^http/i', 'ws', $origin);
             $viteSources = [
                 'script' => $origin,
                 'style' => $origin,
@@ -51,11 +50,11 @@ class SecurityHeaders
         }
 
         $script = "'self' 'nonce-".Vite::cspNonce()."'".(isset($viteSources['script']) ? ' '.$viteSources['script'] : '');
-        $style = "'self' 'unsafe-inline'".(isset($viteSources['style']) ? ' '.$viteSources['style'] : '');
+        $style = "'self' 'nonce-".Vite::cspNonce()."'".(isset($viteSources['style']) ? ' '.$viteSources['style'] : '');
         $font = "'self'".(isset($viteSources['font']) ? ' '.$viteSources['font'] : '');
         $connect = "'self'".(isset($viteSources['connect']) ? ' '.$viteSources['connect'] : '');
 
-        return implode('; ', [
+        $directives = [
             "default-src 'self'",
             "script-src $script",
             "style-src $style",
@@ -66,6 +65,12 @@ class SecurityHeaders
             "base-uri 'self'",
             "form-action 'self'",
             "frame-ancestors 'self'",
-        ]);
+        ];
+
+        if (! app()->isLocal() && ! Vite::isRunningHot()) {
+            array_push($directives, 'upgrade-insecure-requests');
+        }
+
+        return implode('; ', $directives);
     }
 }
