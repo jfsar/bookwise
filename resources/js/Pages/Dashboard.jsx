@@ -32,9 +32,7 @@ function StatCard({ label, value, hint, tone }) {
 
 export default function Dashboard({ metrics, currencies }) {
     const { currentOrganization, organizations, timezones } = usePage().props;
-    console.log(timezones);
     const [showCreate, setShowCreate] = useState(false);
-
     const { data, setData, errors, post, processing } = useForm({
         name: '',
         display_name: '',
