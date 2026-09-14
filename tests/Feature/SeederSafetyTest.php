@@ -6,6 +6,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\AdminUserSeeder;
+use Database\Seeders\CurrencySeeder;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,6 +20,7 @@ class SeederSafetyTest extends TestCase
     public function test_admin_user_seeder_creates_admin_when_none_exists(): void
     {
         (new RoleSeeder)->run();
+        (new CurrencySeeder)->run();
         (new AdminUserSeeder)->run();
 
         $admin = User::where('email', 'admin@example.com')->first();
@@ -40,6 +42,7 @@ class SeederSafetyTest extends TestCase
         ]);
 
         (new RoleSeeder)->run();
+        (new CurrencySeeder)->run();
         (new AdminUserSeeder)->run();
 
         $admin = User::where('email', 'admin@example.com')->first();
