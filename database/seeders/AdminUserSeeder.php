@@ -15,13 +15,14 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::updateOrCreate(
+        $admin = User::firstOrNew(
             ['email' => 'admin@example.com'],
-            [
-                'name' => 'Admin User',
-                'password' => 'password',
-            ],
+            ['name' => 'Admin User', 'password' => 'password'],
         );
+
+        if (! $admin->exists) {
+            $admin->save();
+        }
 
         $admin->forceFill([
             'email_verified_at' => now(),
