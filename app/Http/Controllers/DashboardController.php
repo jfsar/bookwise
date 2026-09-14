@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Organization\SwitchOrganization;
 use App\Dashboard\DashboardMetricsService;
 use App\Models\Currency;
+use DateTimeZone;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,6 +28,9 @@ class DashboardController extends Controller
                     'code' => $currency->code,
                     'name' => $currency->name,
                 ]),
+            'timezones' => collect(DateTimeZone::listIdentifiers())
+                ->map(fn (string $identifier) => ['value' => $identifier, 'label' => $identifier])
+                ->values(),
         ]);
     }
 }

@@ -309,4 +309,24 @@ class DashboardTest extends TestCase
         $this->assertSame(0.0, $metrics['revenue']);
         $this->assertSame(0, $metrics['outstanding_invoices']);
     }
+
+    public function test_dashboard_provides_available_timezones(): void
+    {
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+        $user->organizations()->attach($org->id, ['membership_status' => 'active']);
+
+        $props = $this->responseProps(
+            $this->actingAs($user)
+                ->get('/dashboard')
+                ->assertOk()
+        );
+
+        $this->assertIsArray($props['timezones']);
+        $this->assertNotEmpty($props['timezones']);
+
+        $identifiers = array_column($props['timezones'], 'value');
+        $this->assertContains('UTC', $identifiers);
+        $this->assertContains('Asia/Tokyo', $identifiers);
+    }
 }

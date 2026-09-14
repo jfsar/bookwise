@@ -9,32 +9,6 @@ import { Label } from '@/Components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/Components/ui/native-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 
-const timezones = [
-    { value: 'UTC', label: 'UTC' },
-    { value: 'America/New_York', label: 'Eastern Time' },
-    { value: 'America/Chicago', label: 'Central Time' },
-    { value: 'America/Denver', label: 'Mountain Time' },
-    { value: 'America/Los_Angeles', label: 'Pacific Time' },
-    { value: 'Asia/Manila', label: 'Manila (PHT)' },
-    { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
-    { value: 'Europe/London', label: 'London (GMT)' },
-];
-
-const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-];
-
 function money(value, currency = 'PHP') {
     return Number(value ?? 0).toLocaleString(undefined, {
         style: 'currency',
@@ -57,7 +31,8 @@ function StatCard({ label, value, hint, tone }) {
 }
 
 export default function Dashboard({ metrics, currencies }) {
-    const { currentOrganization, organizations } = usePage().props;
+    const { currentOrganization, organizations, timezones } = usePage().props;
+    console.log(timezones);
     const [showCreate, setShowCreate] = useState(false);
 
     const { data, setData, errors, post, processing } = useForm({
@@ -73,7 +48,12 @@ export default function Dashboard({ metrics, currencies }) {
 
     function submit(event) {
         event.preventDefault();
-        post('/organizations');
+        post('/organizations', {
+            onSuccess: () => {
+                reset();
+                setShowCreate(false);
+            },
+        });
     }
 
     if (!metrics) {
@@ -92,12 +72,15 @@ export default function Dashboard({ metrics, currencies }) {
                 <OrganizationForm
                     showCreate={showCreate}
                     setShowCreate={setShowCreate}
+                    currentOrganization={currentOrganization}
+                    organizations={organizations}
                     data={data}
                     setData={setData}
                     errors={errors}
                     submit={submit}
                     processing={processing}
                     currencies={currencies}
+                    timezones={timezones}
                 />
             </>
         );
@@ -209,20 +192,21 @@ export default function Dashboard({ metrics, currencies }) {
             <OrganizationForm
                 showCreate={showCreate}
                 setShowCreate={setShowCreate}
+                currentOrganization={currentOrganization}
+                organizations={organizations}
                 data={data}
                 setData={setData}
                 errors={errors}
                 submit={submit}
                 processing={processing}
                 currencies={currencies}
+                timezones={timezones}
             />
         </>
     );
 }
 
-function OrganizationForm({ showCreate, setShowCreate, data, setData, errors, submit, processing, currencies }) {
-    const { currentOrganization, organizations } = usePage().props;
-
+function OrganizationForm({ showCreate, setShowCreate, currentOrganization, organizations, data, setData, errors, submit, processing, currencies, timezones }) {
     return (
         <Card className="mt-6">
             <CardHeader>
@@ -257,7 +241,7 @@ function OrganizationForm({ showCreate, setShowCreate, data, setData, errors, su
                                 <Input
                                     value={data.country_code}
                                     maxLength="2"
-                                    onChange={(event) => setData('country_code', event.target.value)}
+                                    onChange={(event) => setData('country_code', event.target.value.toUpperCase())}
                                     className="mt-1"
                                 />
                                 {errors.country_code && <p className="mt-1 text-sm font-medium text-destructive">{errors.country_code}</p>}
@@ -296,9 +280,9 @@ function OrganizationForm({ showCreate, setShowCreate, data, setData, errors, su
                                     onChange={(event) => setData('fiscal_year_start_month', Number(event.target.value))}
                                     className="mt-1 w-full"
                                 >
-                                    {months.map((month, index) => (
-                                        <NativeSelectOption key={month} value={index + 1}>
-                                            {month}
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
+                                        <NativeSelectOption key={month} value={month}>
+                                            {new Date(2000, month - 1, 1).toLocaleString('en', { month: 'long' })}
                                         </NativeSelectOption>
                                     ))}
                                 </NativeSelect>
