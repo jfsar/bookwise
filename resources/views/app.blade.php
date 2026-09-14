@@ -7,7 +7,7 @@
 
         <title inertia>{{ config('app.name') }}</title>
 
-        <script>
+        <script nonce="{{ Vite::cspNonce() }}">
             if (
                 localStorage.getItem('theme') === 'dark' ||
                 (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
