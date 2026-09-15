@@ -14,6 +14,7 @@ use App\Models\Journal;
 use App\Models\Organization;
 use App\Models\ReportExport;
 use App\Reports\ReportFactory;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -46,6 +47,22 @@ class ReportController extends Controller
     public function cashFlow(ReportRequest $request): Response
     {
         return $this->show(ReportType::CashFlow, $request);
+    }
+
+    public function exports(Request $request): JsonResponse
+    {
+        $this->authorize('viewReports', ReportExport::class);
+
+        $user = $request->user();
+        $organization = SwitchOrganization::current($user);
+
+        if (! $organization) {
+            return response()->json(['recentExports' => []]);
+        }
+
+        return response()->json([
+            'recentExports' => $this->recentExports($organization, $user->id),
+        ]);
     }
 
     public function store(ReportRequest $request): RedirectResponse
@@ -232,8 +249,6 @@ class ReportController extends Controller
                 'report_type' => $export->report_type->value,
                 'status' => $export->status->value,
                 'file_name' => $export->file_name,
-                'file_path' => $export->file_path,
-                'error_message' => $export->error_message,
                 'created_at' => $export->created_at?->toIso8601String(),
                 'download_url' => $export->status === ReportExportStatus::Completed
                     ? route('reports.download', $export)

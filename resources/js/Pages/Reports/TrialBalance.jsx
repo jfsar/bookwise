@@ -1,9 +1,7 @@
-import { useState } from 'react';
-import { router, usePage } from '@inertiajs/react';
-
 import AppLayout from '@/Layouts/AppLayout';
 import StatusBadge from '@/Components/StatusBadge';
 import ReportShell from '@/Pages/Reports/ReportShell';
+import useReportFilters from '@/Pages/Reports/useReportFilters';
 import { Card } from '@/Components/ui/card';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 
@@ -22,39 +20,11 @@ const columns = [
 ];
 
 export default function TrialBalance() {
-    const { reportType, currency, data, filters: initialFilters, accounts, journals, fiscalYears, accountingPeriods, recentExports } = usePage().props;
-
-    const [filters, setFilters] = useState(initialFilters ?? {});
-    const [exporting, setExporting] = useState(false);
-
-    function applyFilters() {
-        router.get('/reports/trial-balance', filters, { preserveState: true, replace: true });
-    }
-
-    function handleExport() {
-        setExporting(true);
-
-        router.post('/reports/export', { report_type: reportType, ...filters }, {
-            onFinish: () => setExporting(false),
-        });
-    }
+    const { currency, data, ...report } = useReportFilters('/reports/trial-balance');
 
     return (
         <>
-            <ReportShell
-                title="Trial Balance"
-                reportType={reportType}
-                filters={filters}
-                setFilters={setFilters}
-                applyFilters={applyFilters}
-                accounts={accounts}
-                journals={journals}
-                fiscalYears={fiscalYears}
-                accountingPeriods={accountingPeriods}
-                recentExports={recentExports}
-                exporting={exporting}
-                onExport={handleExport}
-            >
+            <ReportShell title="Trial Balance" {...report}>
                 <Card className="overflow-hidden">
                     <div className="flex items-center justify-between px-6 py-4">
                         <h4 className="font-display text-base font-semibold">Trial Balance</h4>

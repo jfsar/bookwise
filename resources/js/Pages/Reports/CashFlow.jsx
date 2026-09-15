@@ -1,9 +1,7 @@
-import { useState } from 'react';
-import { router, usePage } from '@inertiajs/react';
-
 import AppLayout from '@/Layouts/AppLayout';
 import MoneyRow from '@/Pages/Reports/StatementSummaryRow';
 import ReportShell from '@/Pages/Reports/ReportShell';
+import useReportFilters from '@/Pages/Reports/useReportFilters';
 import { Card } from '@/Components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 
@@ -22,39 +20,11 @@ const sections = [
 ];
 
 export default function CashFlow() {
-    const { reportType, currency, data, filters: initialFilters, accounts, journals, fiscalYears, accountingPeriods, recentExports } = usePage().props;
-
-    const [filters, setFilters] = useState(initialFilters ?? {});
-    const [exporting, setExporting] = useState(false);
-
-    function applyFilters() {
-        router.get('/reports/cash-flow', filters, { preserveState: true, replace: true });
-    }
-
-    function handleExport() {
-        setExporting(true);
-
-        router.post('/reports/export', { report_type: reportType, ...filters }, {
-            onFinish: () => setExporting(false),
-        });
-    }
+    const { currency, data, ...report } = useReportFilters('/reports/cash-flow');
 
     return (
         <>
-            <ReportShell
-                title="Cash Flow Statement"
-                reportType={reportType}
-                filters={filters}
-                setFilters={setFilters}
-                applyFilters={applyFilters}
-                accounts={accounts}
-                journals={journals}
-                fiscalYears={fiscalYears}
-                accountingPeriods={accountingPeriods}
-                recentExports={recentExports}
-                exporting={exporting}
-                onExport={handleExport}
-            >
+            <ReportShell title="Cash Flow Statement" {...report}>
                 <div className="grid gap-4">
                     {sections.map(([key, label]) => {
                         const items = data?.sections?.[key] ?? [];

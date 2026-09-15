@@ -336,6 +336,95 @@ class ReportsTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_exports_endpoint_lists_the_users_recent_exports(): void
+    {
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+        $user->organizations()->attach($org->id, ['membership_status' => 'active']);
+        $this->grantPermission($user, $org, 'view-reports');
+
+        $completed = ReportExport::create([
+            'organization_id' => $org->id,
+            'user_id' => $user->id,
+            'report_type' => 'trial-balance',
+            'filters' => [],
+            'request_hash' => str_repeat('a', 64),
+            'status' => 'completed',
+            'file_name' => 'trial-balance.csv',
+            'file_path' => 'reports/3.csv',
+            'file_size' => 5,
+            'completed_at' => now(),
+        ]);
+
+        $failed = ReportExport::create([
+            'organization_id' => $org->id,
+            'user_id' => $user->id,
+            'report_type' => 'general-ledger',
+            'filters' => [],
+            'request_hash' => str_repeat('b', 64),
+            'status' => 'failed',
+            'error_message' => 'Disk full',
+            'completed_at' => now(),
+        ]);
+        $failed->created_at = now()->subMinutes(5);
+        $failed->save();
+
+        $response = $this->actingAs($user)->getJson('/reports/exports')->assertOk();
+
+        $recentExports = $response->json('recentExports');
+
+        $this->assertCount(2, $recentExports);
+        $this->assertSame($completed->id, $recentExports[0]['id']);
+        $this->assertSame('trial-balance.csv', $recentExports[0]['file_name']);
+        $this->assertNotNull($recentExports[0]['download_url']);
+        $this->assertNull($recentExports[1]['download_url']);
+        $this->assertArrayNotHasKey('error_message', $recentExports[0]);
+        $this->assertArrayNotHasKey('error_message', $recentExports[1]);
+        $this->assertArrayNotHasKey('file_path', $recentExports[0]);
+        $this->assertArrayNotHasKey('file_path', $recentExports[1]);
+    }
+
+    public function test_exports_endpoint_forbids_users_without_permission(): void
+    {
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+        $user->organizations()->attach($org->id, ['membership_status' => 'active']);
+
+        $this->actingAs($user)
+            ->getJson('/reports/exports')
+            ->assertForbidden();
+    }
+
+    public function test_report_page_props_do_not_expose_internal_export_fields(): void
+    {
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+        $user->organizations()->attach($org->id, ['membership_status' => 'active']);
+        $this->grantPermission($user, $org, 'view-reports');
+
+        ReportExport::create([
+            'organization_id' => $org->id,
+            'user_id' => $user->id,
+            'report_type' => 'trial-balance',
+            'filters' => [],
+            'request_hash' => str_repeat('c', 64),
+            'status' => 'completed',
+            'file_name' => 'trial-balance.csv',
+            'file_path' => 'reports/4.csv',
+            'file_size' => 5,
+            'completed_at' => now(),
+        ]);
+
+        $props = $this->responseProps(
+            $this->actingAs($user)->get('/reports/general-ledger')->assertOk()
+        );
+
+        $this->assertCount(1, $props['recentExports']);
+        $this->assertArrayNotHasKey('error_message', $props['recentExports'][0]);
+        $this->assertArrayNotHasKey('file_path', $props['recentExports'][0]);
+        $this->assertArrayHasKey('download_url', $props['recentExports'][0]);
+    }
+
     /**
      * @return array{org: Organization, user: User}
      */

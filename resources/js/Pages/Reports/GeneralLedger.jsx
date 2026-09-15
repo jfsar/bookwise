@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { router, usePage } from '@inertiajs/react';
-
 import AppLayout from '@/Layouts/AppLayout';
 import ReportShell from '@/Pages/Reports/ReportShell';
+import useReportFilters from '@/Pages/Reports/useReportFilters';
 import { Card } from '@/Components/ui/card';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 
@@ -16,39 +14,11 @@ function formatMoney(value, currency = 'PHP') {
 }
 
 export default function GeneralLedger() {
-    const { reportType, currency, data, filters: initialFilters, accounts, journals, fiscalYears, accountingPeriods, recentExports } = usePage().props;
-
-    const [filters, setFilters] = useState(initialFilters ?? {});
-    const [exporting, setExporting] = useState(false);
-
-    function applyFilters() {
-        router.get('/reports/general-ledger', filters, { preserveState: true, replace: true });
-    }
-
-    function handleExport() {
-        setExporting(true);
-
-        router.post('/reports/export', { report_type: reportType, ...filters }, {
-            onFinish: () => setExporting(false),
-        });
-    }
+    const { currency, data, ...report } = useReportFilters('/reports/general-ledger');
 
     return (
         <>
-            <ReportShell
-                title="General Ledger"
-                reportType={reportType}
-                filters={filters}
-                setFilters={setFilters}
-                applyFilters={applyFilters}
-                accounts={accounts}
-                journals={journals}
-                fiscalYears={fiscalYears}
-                accountingPeriods={accountingPeriods}
-                recentExports={recentExports}
-                exporting={exporting}
-                onExport={handleExport}
-            >
+            <ReportShell title="General Ledger" {...report}>
                 <Card className="overflow-hidden">
                     {data?.rows?.length === 0 || !data ? (
                         <div className="px-6 py-10 text-center text-sm text-on-surface-muted dark:text-on-surface-muted">
