@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Actions\JournalEntry\CreateJournalEntry;
 use App\Actions\JournalEntry\PostJournalEntry;
+use App\Enums\ReportExportStatus;
 use App\Jobs\ExportReportJob;
 use App\Models\Account;
 use App\Models\AccountingPeriod;
@@ -15,6 +16,7 @@ use App\Models\Permission;
 use App\Models\ReportExport;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -252,6 +254,83 @@ class ReportsTest extends TestCase
         ]);
     }
 
+    public function test_export_is_rejected_when_the_report_has_no_records(): void
+    {
+        Queue::fake();
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+        $user->organizations()->attach($org->id, ['membership_status' => 'active']);
+        $this->grantPermission($user, $org, 'view-reports');
+
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->post('/reports/export', [
+            'report_type' => 'general-ledger',
+        ])
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        Queue::assertNotPushed(ExportReportJob::class);
+        $this->assertDatabaseCount('report_exports', 0);
+    }
+
+    public function test_export_is_marked_failed_when_the_report_has_no_records(): void
+    {
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+
+        $export = ReportExport::create([
+            'organization_id' => $org->id,
+            'user_id' => $user->id,
+            'report_type' => 'general-ledger',
+            'filters' => [],
+            'request_hash' => str_repeat('f', 64),
+            'status' => 'queued',
+        ]);
+
+        (new ExportReportJob($export->id))->handle();
+
+        $export->refresh();
+
+        $this->assertSame(ReportExportStatus::Failed, $export->status);
+        $this->assertNull($export->file_path);
+        $this->assertStringContainsString('There are no records to export', $export->error_message);
+    }
+
+    public function test_export_is_marked_failed_when_the_file_cannot_be_written(): void
+    {
+        $ledger = $this->seedLedger();
+
+        $export = ReportExport::create([
+            'organization_id' => $ledger['org']->id,
+            'user_id' => $ledger['user']->id,
+            'report_type' => 'general-ledger',
+            'filters' => [],
+            'request_hash' => str_repeat('d', 64),
+            'status' => 'queued',
+        ]);
+
+        $originalDisk = Storage::disk('s3');
+        $adapter = \Mockery::mock(FilesystemAdapter::class)
+            ->makePartial()
+            ->shouldReceive('put')->once()->andReturn(false)
+            ->getMock();
+        Storage::set('s3', $adapter);
+
+        try {
+            (new ExportReportJob($export->id))->handle();
+        } finally {
+            Storage::set('s3', $originalDisk);
+        }
+
+        $export->refresh();
+
+        $this->assertSame(ReportExportStatus::Failed, $export->status);
+        $this->assertNull($export->file_path);
+        $this->assertStringContainsString('Unable to write the report export file', $export->error_message);
+    }
+
     public function test_general_ledger_is_scoped_to_the_active_organization(): void
     {
         $ledger = $this->seedLedger();
@@ -274,7 +353,7 @@ class ReportsTest extends TestCase
 
     public function test_download_returns_the_completed_export_file(): void
     {
-        Storage::fake('local');
+        Storage::fake('s3');
         $org = Organization::factory()->create();
         $user = User::factory()->create();
         $user->organizations()->attach($org->id, ['membership_status' => 'active']);
@@ -292,7 +371,7 @@ class ReportsTest extends TestCase
             'file_size' => 5,
             'completed_at' => now(),
         ]);
-        Storage::disk('local')->put('reports/1.csv', 'code,name');
+        Storage::disk('s3')->put('reports/1.csv', 'code,name');
 
         $this->actingAs($user);
         $this->confirmPassword();
@@ -302,9 +381,37 @@ class ReportsTest extends TestCase
             ->assertDownload('trial-balance.csv');
     }
 
+    public function test_download_returns_404_when_the_export_file_is_missing(): void
+    {
+        Storage::fake('s3');
+        $org = Organization::factory()->create();
+        $user = User::factory()->create();
+        $user->organizations()->attach($org->id, ['membership_status' => 'active']);
+        $this->grantPermission($user, $org, 'view-reports');
+
+        $export = ReportExport::create([
+            'organization_id' => $org->id,
+            'user_id' => $user->id,
+            'report_type' => 'trial-balance',
+            'filters' => [],
+            'request_hash' => str_repeat('e', 64),
+            'status' => 'completed',
+            'file_name' => 'trial-balance.csv',
+            'file_path' => 'reports/missing.csv',
+            'file_size' => 5,
+            'completed_at' => now(),
+        ]);
+
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->get("/reports/exports/{$export->id}")
+            ->assertNotFound();
+    }
+
     public function test_download_forbids_users_outside_the_organization(): void
     {
-        Storage::fake('local');
+        Storage::fake('s3');
         $org = Organization::factory()->create();
         $owner = User::factory()->create();
         $owner->organizations()->attach($org->id, ['membership_status' => 'active']);
@@ -322,7 +429,7 @@ class ReportsTest extends TestCase
             'file_size' => 5,
             'completed_at' => now(),
         ]);
-        Storage::disk('local')->put('reports/2.csv', 'code,name');
+        Storage::disk('s3')->put('reports/2.csv', 'code,name');
 
         $intruder = User::factory()->create();
         $intruderOrg = Organization::factory()->create();

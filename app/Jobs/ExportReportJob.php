@@ -40,11 +40,19 @@ class ExportReportJob implements ShouldQueue
                 $export->filters
             );
 
-            $csv = $this->render($export->report_type, $report->build());
+            $data = $report->build();
+
+            if (! $report->hasRecords($data)) {
+                throw new \RuntimeException('There are no records to export for the selected report and filters.');
+            }
+
+            $csv = $this->render($export->report_type, $data);
             $fileName = str_replace(' ', '-', strtolower($export->report_type->label())).'-'.now()->format('Ymd-His').'.csv';
             $path = 'reports/'.$export->organization_id.'/'.$export->id.'/'.$fileName;
 
-            Storage::disk('local')->put($path, $csv);
+            if (! Storage::disk('s3')->put($path, $csv)) {
+                throw new \RuntimeException("Unable to write the report export file to [{$path}].");
+            }
 
             $export->update([
                 'status' => ReportExportStatus::Completed,

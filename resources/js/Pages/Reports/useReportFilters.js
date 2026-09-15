@@ -6,6 +6,7 @@ export default function useReportFilters(reportPath) {
         reportType,
         currency,
         data,
+        hasRecords = false,
         filters: initialFilters,
         accounts,
         journals,
@@ -37,6 +38,7 @@ export default function useReportFilters(reportPath) {
     return {
         currency,
         data,
+        hasRecords,
         filters,
         setFilters,
         applyFilters,
