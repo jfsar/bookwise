@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { BookOpenCheck } from 'lucide-react';
 import ThemeToggle from '@/Components/ThemeToggle';
+import ErrorBoundary from '@/Components/ErrorBoundary';
 
 export default function GuestLayout({ children }) {
     const { appName } = usePage().props;
@@ -22,7 +23,7 @@ export default function GuestLayout({ children }) {
                 </div>
 
                 <div className="w-full sm:max-w-md mt-6 px-6 py-4 bg-surface-lowest dark:bg-surface-lowest shadow-ambient-md overflow-hidden sm:rounded-xl">
-                    {children}
+                    <ErrorBoundary name="page-content">{children}</ErrorBoundary>
                 </div>
             </div>
         </div>

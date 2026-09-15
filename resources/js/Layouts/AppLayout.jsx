@@ -19,6 +19,7 @@ import {
 
 import OrgSwitcher from '@/Components/OrgSwitcher';
 import ThemeToggle from '@/Components/ThemeToggle';
+import ErrorBoundary from '@/Components/ErrorBoundary';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
 import {
     Sidebar,
@@ -175,7 +176,7 @@ export default function AppLayout({ children }) {
                             </div>
                         )}
 
-                        {children}
+                        <ErrorBoundary name="page-content">{children}</ErrorBoundary>
                     </div>
                 </SidebarInset>
             </SidebarProvider>
