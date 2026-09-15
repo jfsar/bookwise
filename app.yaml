@@ -10,7 +10,7 @@ kind: wasmer.io/App.v0
 owner: jfsar # TODO: replace with your Wasmer namespace/username
 name: bookwise
 package: . # TODO: match owner above
-debug: true
+debug: false
 
 jobs:
   - name: queue-worker
@@ -31,7 +31,7 @@ jobs:
 env:
   APP_NAME: BookWise
   APP_ENV: production
-  APP_DEBUG: "true"
+  APP_DEBUG: "false"
   APP_URL: "" # TODO: replace with real deployed URL
 
   APP_LOCALE: en
@@ -61,6 +61,8 @@ env:
   BROADCAST_CONNECTION: log
   FILESYSTEM_DISK: local
   QUEUE_CONNECTION: redis
+  # Must exceed the queue worker --timeout (600s) so in-flight jobs are never re-reserved.
+  REDIS_QUEUE_RETRY_AFTER: "630"
 
   CACHE_STORE: redis
   REDIS_CACHE_DB: "0"
@@ -68,7 +70,7 @@ env:
   MEMCACHED_HOST: 127.0.0.1
 
   REDIS_CLIENT: predis
-  REDIS_PORT: "6379" # TODO: confirm against your Upstash/Redis provider's port
+  REDIS_PORT: "6379"
 
   MAIL_MAILER: smtp
   MAIL_SCHEME: "null"
