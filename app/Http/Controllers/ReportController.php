@@ -78,6 +78,12 @@ class ReportController extends Controller
 
         $type = ReportType::from($request->validated('report_type'));
 
+        $report = ReportFactory::make($type, $organization, $request->filters());
+
+        if (! $report->hasRecords($report->build())) {
+            return back()->with('error', 'There are no records for the selected report and filters.');
+        }
+
         $export = ReportExport::create([
             'organization_id' => $organization->id,
             'user_id' => $user->id,
@@ -100,7 +106,11 @@ class ReportController extends Controller
             abort(404);
         }
 
-        return Storage::disk('local')->download($reportExport->file_path, $reportExport->file_name);
+        if (! Storage::disk('s3')->exists($reportExport->file_path)) {
+            abort(404);
+        }
+
+        return Storage::disk('s3')->download($reportExport->file_path, $reportExport->file_name);
     }
 
     protected function show(ReportType $type, ReportRequest $request): Response
@@ -115,8 +125,9 @@ class ReportController extends Controller
         }
 
         $report = ReportFactory::make($type, $organization, $request->filters());
+        $data = $report->build();
 
-        return $this->render($type, $request, $organization, $report->build());
+        return $this->render($type, $request, $organization, $data, $report->hasRecords($data));
     }
 
     /**
@@ -127,9 +138,11 @@ class ReportController extends Controller
         ReportRequest $request,
         ?Organization $organization,
         ?array $data,
+        bool $hasRecords = false,
     ): Response {
         return Inertia::render($this->page($type), [
             'reportType' => $type->value,
+            'hasRecords' => $hasRecords,
             'currency' => $organization?->baseCurrency->code,
             'data' => $data,
             'filters' => $request->filters(),

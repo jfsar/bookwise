@@ -1,9 +1,11 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Banknote,
     BanknoteArrowDown,
     BookOpen,
     BookOpenCheck,
     CalendarRange,
+    Contact,
     FileText,
     History,
     LayoutDashboard,
@@ -19,6 +21,7 @@ import {
 
 import OrgSwitcher from '@/Components/OrgSwitcher';
 import ThemeToggle from '@/Components/ThemeToggle';
+import ErrorBoundary from '@/Components/ErrorBoundary';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
 import {
     Sidebar,
@@ -46,6 +49,9 @@ const navigation = [
             { label: 'Chart of Accounts', href: '/accounts', icon: BookOpen },
             { label: 'Journals', href: '/journals', icon: NotebookPen },
             { label: 'Journal Entries', href: '/journal-entries', icon: FileText },
+            { label: 'Customers', href: '/customers', icon: Contact },
+            { label: 'Invoices', href: '/invoices', icon: Wallet },
+            { label: 'Payments', href: '/payments', icon: Banknote },
         ],
     },
     {
@@ -175,7 +181,7 @@ export default function AppLayout({ children }) {
                             </div>
                         )}
 
-                        {children}
+                        <ErrorBoundary name="page-content">{children}</ErrorBoundary>
                     </div>
                 </SidebarInset>
             </SidebarProvider>

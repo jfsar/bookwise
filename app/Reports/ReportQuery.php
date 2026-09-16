@@ -113,4 +113,24 @@ abstract class ReportQuery
     {
         return round($value, 4);
     }
+
+    /**
+     * Whether the report's build result contains any records to display or export.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function hasRecords(array $data): bool
+    {
+        if (array_key_exists('rows', $data)) {
+            return $data['rows'] !== [];
+        }
+
+        foreach ($data['sections'] ?? [] as $section) {
+            if ($section !== []) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

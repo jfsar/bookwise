@@ -38,6 +38,7 @@ export default function ReportShell({
     accountingPeriods,
     recentExports,
     exporting = false,
+    hasRecords = false,
     onExport,
     children,
 }) {
@@ -113,7 +114,7 @@ export default function ReportShell({
                             </Button>
                         </>
                     )}
-                    <Button variant="default" disabled={exporting} onClick={onExport}>
+                    <Button variant="default" disabled={exporting || !hasRecords} onClick={onExport}>
                         {exporting ? 'Exporting...' : 'Export CSV'}
                     </Button>
                 </div>

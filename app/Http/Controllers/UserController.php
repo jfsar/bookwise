@@ -7,13 +7,13 @@ use App\Actions\User\CreateUser;
 use App\Actions\User\UpdateUser;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use App\Models\Organization;
 
 class UserController extends Controller
 {
