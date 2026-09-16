@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerInvoiceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FiscalYearController;
 use App\Http\Controllers\JournalController;
@@ -40,6 +42,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/journal-entries/{journalEntry}/post', [JournalEntryController::class, 'post'])->name('journal-entries.post');
     Route::post('/journal-entries/{journalEntry}/reverse', [JournalEntryController::class, 'reverse'])->name('journal-entries.reverse');
     Route::post('/journal-entries/{journalEntry}/cancel', [JournalEntryController::class, 'cancel'])->name('journal-entries.cancel');
+
+    Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+    Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store')->middleware('password.confirm');
+    Route::put('/customers/{customer}', [CustomerController::class, 'update'])->name('customers.update')->middleware('password.confirm');
+
+    Route::get('/invoices', [CustomerInvoiceController::class, 'index'])->name('invoices.index');
+    Route::post('/invoices', [CustomerInvoiceController::class, 'store'])->name('invoices.store')->middleware('password.confirm');
+    Route::post('/invoices/{customerInvoice}/post', [CustomerInvoiceController::class, 'post'])->name('invoices.post');
+    Route::post('/invoices/{customerInvoice}/void', [CustomerInvoiceController::class, 'void'])->name('invoices.void');
 
     Route::get('/period-closing', [PeriodClosingController::class, 'index'])->name('period-closing.index');
     Route::post('/accounting-periods/{accountingPeriod}/close', [PeriodClosingController::class, 'close'])->name('accounting-periods.close')->middleware('password.confirm');

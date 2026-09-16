@@ -156,6 +156,10 @@ class AuditLogService
     /**
      * Serialize the exact payload that defines a record's chain hash.
      *
+     * Keys in old_values and new_values are sorted to match jsonb's
+     * canonical representation, ensuring the hash is reproducible after
+     * a database round-trip.
+     *
      * @param  array<string, mixed>|null  $oldValues
      * @param  array<string, mixed>|null  $newValues
      */
@@ -175,9 +179,34 @@ class AuditLogService
             'action' => $action,
             'auditable_type' => $auditableType,
             'auditable_id' => $auditableId,
-            'old_values' => $oldValues,
-            'new_values' => $newValues,
+            'old_values' => $this->canonicalize($oldValues),
+            'new_values' => $this->canonicalize($newValues),
             'created_at' => $createdAt,
         ], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * Sort array keys recursively to match PostgreSQL jsonb's canonical
+     * key ordering, ensuring deterministic hash payloads.
+     *
+     * @param  array<string, mixed>|null  $value
+     * @return array<string, mixed>|null
+     */
+    private function canonicalize(?array $value): ?array
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        ksort($value, SORT_STRING);
+
+        foreach ($value as &$item) {
+            if (is_array($item)) {
+                $item = $this->canonicalize($item);
+            }
+        }
+        unset($item);
+
+        return $value;
     }
 }

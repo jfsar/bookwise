@@ -10,6 +10,7 @@
 .zed/
 node_modules/
 tests/
+docs/
 .env
 .env.backup
 .env.production

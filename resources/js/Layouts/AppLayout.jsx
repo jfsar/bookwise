@@ -4,6 +4,7 @@ import {
     BookOpen,
     BookOpenCheck,
     CalendarRange,
+    Contact,
     FileText,
     History,
     LayoutDashboard,
@@ -47,6 +48,7 @@ const navigation = [
             { label: 'Chart of Accounts', href: '/accounts', icon: BookOpen },
             { label: 'Journals', href: '/journals', icon: NotebookPen },
             { label: 'Journal Entries', href: '/journal-entries', icon: FileText },
+            { label: 'Customers', href: '/customers', icon: Contact },
         ],
     },
     {

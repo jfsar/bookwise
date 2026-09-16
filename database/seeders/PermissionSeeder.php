@@ -33,6 +33,14 @@ class PermissionSeeder extends Seeder
             ['name' => 'view-audit-logs', 'description' => 'View audit logs.'],
             ['name' => 'manage-users', 'description' => 'Manage users and memberships.'],
             ['name' => 'manage-settings', 'description' => 'Manage organization settings.'],
+            ['name' => 'view-customers', 'description' => 'View customers.'],
+            ['name' => 'create-customers', 'description' => 'Create new customers.'],
+            ['name' => 'update-customers', 'description' => 'Update existing customers.'],
+            ['name' => 'archive-customers', 'description' => 'Archive/deactivate customers.'],
+            ['name' => 'view-invoices', 'description' => 'View customer invoices.'],
+            ['name' => 'create-invoices', 'description' => 'Create customer invoices.'],
+            ['name' => 'approve-invoices', 'description' => 'Approve and post customer invoices.'],
+            ['name' => 'void-invoices', 'description' => 'Void draft customer invoices.'],
         ];
 
         foreach ($permissions as $permission) {
@@ -73,6 +81,11 @@ class PermissionSeeder extends Seeder
                 'view-fiscal-years',
                 'view-accounting-periods',
                 'view-reports',
+                'view-customers',
+                'create-customers',
+                'update-customers',
+                'view-invoices',
+                'create-invoices',
             ])->get());
         }
 
@@ -86,6 +99,8 @@ class PermissionSeeder extends Seeder
                 'view-accounting-periods',
                 'view-reports',
                 'view-audit-logs',
+                'view-customers',
+                'view-invoices',
             ])->get());
         }
 
