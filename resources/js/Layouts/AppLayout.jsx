@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Banknote,
     BanknoteArrowDown,
     BookOpen,
     BookOpenCheck,
@@ -49,6 +50,8 @@ const navigation = [
             { label: 'Journals', href: '/journals', icon: NotebookPen },
             { label: 'Journal Entries', href: '/journal-entries', icon: FileText },
             { label: 'Customers', href: '/customers', icon: Contact },
+            { label: 'Invoices', href: '/invoices', icon: Wallet },
+            { label: 'Payments', href: '/payments', icon: Banknote },
         ],
     },
     {

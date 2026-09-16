@@ -41,6 +41,9 @@ class PermissionSeeder extends Seeder
             ['name' => 'create-invoices', 'description' => 'Create customer invoices.'],
             ['name' => 'approve-invoices', 'description' => 'Approve and post customer invoices.'],
             ['name' => 'void-invoices', 'description' => 'Void draft customer invoices.'],
+            ['name' => 'view-payments', 'description' => 'View customer payments.'],
+            ['name' => 'create-payments', 'description' => 'Create customer payments.'],
+            ['name' => 'approve-payments', 'description' => 'Post customer payments to the ledger.'],
         ];
 
         foreach ($permissions as $permission) {
@@ -86,6 +89,8 @@ class PermissionSeeder extends Seeder
                 'update-customers',
                 'view-invoices',
                 'create-invoices',
+                'view-payments',
+                'create-payments',
             ])->get());
         }
 
@@ -101,6 +106,7 @@ class PermissionSeeder extends Seeder
                 'view-audit-logs',
                 'view-customers',
                 'view-invoices',
+                'view-payments',
             ])->get());
         }
 

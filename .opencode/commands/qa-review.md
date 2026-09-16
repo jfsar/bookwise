@@ -7,6 +7,12 @@ Review the code described by $ARGUMENTS.
 
 $ARGUMENTS may contain files, directories, classes, functions, React components, pages, APIs, routes, features, or specific review concerns.
 
+Before reviewing:
+
+- Discover the available project skills under .agents/skills/.
+- Identify and load every skill relevant to the code being reviewed.
+- Use those skills as project-specific review criteria.
+
 Perform a thorough review before making recommendations.
 
 ## Review Areas
@@ -39,6 +45,7 @@ Classify every finding as:
 Report findings from highest to lowest severity.
 
 For each finding include:
+
 - **Severity**
 - **Location**
 - **Issue**

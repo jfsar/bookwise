@@ -13,7 +13,7 @@ This log records the ordered execution of SRS requirements (see `SRS.md`). Only 
 | 1 — MVP Accounting Core | complete |
 | 2 — Ledger & Core Reporting | complete |
 | 3 — Approval & Security Controls | complete |
-| 4 — Accounts Receivable | not_started |
+| 4 — Accounts Receivable | in_progress |
 | 5 — Accounts Payable | not_started |
 | 6 — Banking | not_started |
 | 7 — Enterprise & Operational Features | not_started |
@@ -171,9 +171,99 @@ This log records the ordered execution of SRS requirements (see `SRS.md`). Only 
 - None outstanding for Phase 3 as recorded; Phase 3 is effectively complete for the slices defined
   in the V1.1 order.
 
+---
+
+## Phase 4 - Accounts Receivable
+
+### 4.1 Customers (SRS §7.22; §0.5.1; §0.18)
+
+**Status:** Implemented
+
+**SRS / V1.1 references**
+
+- §7.22 Customers (number, name, contact, tax, payment terms, credit limit, receivable account, status)
+- §0.5.1 organization-scoped uniqueness `UNIQUE (organization_id, customer_number)`
+- §0.18 customer schema corrections
+
+**Implementation evidence**
+
+- `app/Models/Customer.php`, `app/Actions/Customer/CreateCustomer.php`,
+  `app/Actions/Customer/UpdateCustomer.php`, `app/Http/Controllers/CustomerController.php`,
+  `app/Http/Requests/StoreCustomerRequest.php` / `UpdateCustomerRequest.php`
+- `app/Policies/CustomerPolicy.php`, composite org-safe FK on receivable account
+- Concurrency-safe customer numbering via per-organization sequences (no `MAX+1`)
+- `resources/js/Pages/Customers/{Index,CustomerForm}.jsx`, routes `customers.index/store/update`
+
+**Tests:** `tests/Feature/CustomerTest.php`.
+
+---
+
+### 4.2 Customer Invoices (SRS §7.23, §7.24; §0.5.1; §0.7; §0.15; §0.18)
+
+**Status:** Implemented
+
+**SRS / V1.1 references**
+
+- §7.23 Customer Invoices lifecycle (draft → issued → partially paid → paid; void; cancelled)
+- §7.24 Invoice Accounting (DR A/R, CR Revenue, CR Tax payable) — posted through §0.7 boundary
+- §0.5.1 `UNIQUE (organization_id, invoice_number)` and `UNIQUE (organization_id, idempotency_key)`
+- §0.7 `PostJournalEntry` is the single posting boundary
+- §0.15 concurrency-safe invoice numbering (no `MAX+1`)
+- §0.8 maker-checker: `creator != final poster`
+
+**Implementation evidence**
+
+- `app/Models/CustomerInvoice.php`, `CustomerInvoiceLine.php`
+- `app/Actions/CustomerInvoice/{CreateCustomerInvoice,PostCustomerInvoice,VoidCustomerInvoice}.php`
+- `PostCustomerInvoice` resolves journal + open fiscal year/period, builds DR A/R / CR revenue / CR
+  tax lines, and posts through `PostJournalEntry` inside one transaction; rejects `created_by === poster`.
+- `app/Policies/CustomerInvoicePolicy.php` (viewAny/create/post/void), composite org-safe FKs to
+  customers, journal entries, accounts, tax codes.
+- Concurrency-safe `INV-######` numbering via `organizations.customer_invoice_number_sequence`.
+- `resources/js/Pages/Invoices/{Index,CustomerInvoiceForm}.jsx`, routes `invoices.index/store/post/void`.
+- Store route behind `password.confirm` (financial-configuration/security scope).
+
+**Tests:** `tests/Feature/CustomerInvoiceTest.php` (lifecycle, maker-checker, closed-period rejection).
+
+---
+
+### 4.3 Customer Payments — Implemented
+
+SRS §7.25, Scenario 4 (DR Cash / CR A/R), §7.24. Status: `voided_at` skipped (SRS does not require
+payment voiding); no `void` route.
+
+- `app/Enums/CustomerPaymentStatus.php`; `app/Models/CustomerPayment.php`,
+  `CustomerPaymentAllocation.php` (allocation model is schema-only, no domain logic yet);
+  `database/factories/CustomerPaymentFactory.php`.
+- `app/Actions/CustomerPayment/{CreateCustomerPayment,PostCustomerPayment}.php` —
+  concurrency-safe `PAY-######` via `organizations.customer_payment_number_sequence`, idempotency on
+  `(organization_id, idempotency_key)`, per-org scoped customer/currency/cash-account checks.
+  `PostCustomerPayment` resolves journal + open fiscal year/period, builds DR cash / CR A/R, posts
+  through `PostJournalEntry`; rejects `created_by === poster` and missing debit source.
+- `app/Policies/CustomerPaymentPolicy.php` (viewAny/create/post), composite org-safe FK on
+  `customer_payments.cash_account_id` (2026_09_16_110002) + CHECK
+  `ck_customer_payments_debit_source` (posted payments must carry a cash or bank account).
+- `app/Http/Controllers/CustomerPaymentController.php`, `StoreCustomerPaymentRequest`,
+  routes `payments.index/store/post` (store behind `password.confirm`).
+- `database/seeders/PermissionSeeder.php`: `view-payments`, `create-payments`, `approve-payments`.
+- `resources/js/Pages/Payments/{Index,CustomerPaymentForm}.jsx`; nav link in `AppLayout` (Ledger group).
+
+**Tests:** `tests/Feature/CustomerPaymentTest.php` (draft lifecycle, numbering, idempotency,
+org-scope validation, posting to ledger, maker-checker, closed-period rejection, 404/catch-all).
+Suite green: 17 payments + 21 invoices + 17 customer = 55 tests / 159 assertions.
+
+---
+
 ## Next eligible item
 
-With Phase 3 complete, the reconciled roadmap moves to **Phase 4 — Accounts Receivable**
-(SRS §0.39 Phase 3 / §78 Phase 3): Customers, Invoices, Customer Payments, Payment Allocation
-(row-locked, idempotent, over-allocation-safe), Credit Notes, and AR Aging, all posting through
-the single `PostJournalEntry` boundary.
+**Payment Allocation** — the continuation of reconciled Phase 4 (SRS §78 Phase 3 / §0.39 Phase 3;
+§7.24; §7.25). Payment drafts can now be created and posted; the open invoices a payment settles are
+allocated via `customer_payment_allocations` (§0.9 row-locked allocation, §0.18).
+
+- Schema (`customer_payment_allocations`) is already in place; `CustomerPaymentAllocation` model
+  exists but has no domain logic yet.
+- Missing: `AllocateCustomerPayment` (row-locked allocation of outstanding invoice balances while
+  respecting §0.9), reconcile-on-post so an allocated, fully-settled payment flips invoices to
+  partially paid/paid, AR Aging (§7.26) reports can follow once allocation exists.
+
+Date: 2026-09-16

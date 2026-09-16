@@ -7,6 +7,13 @@ Debug and fix the issue described by $ARGUMENTS.
 
 Treat $ARGUMENTS as unrestricted context. It may contain errors, stack traces, files, classes, methods, functions, React components, hooks, routes, endpoints, queries, or expected/actual behavior.
 
+Before implementing changes:
+
+- Discover the available project skills under .agents/skills/.
+- Identify and load every skill relevant to the task.
+- Treat loaded skills as project-specific instructions and follow them throughout the implementation.
+- Do not ignore a relevant skill merely because the requested change appears simple.
+
 Follow this workflow:
 
 1. Inspect the repository and relevant code.
@@ -24,6 +31,7 @@ Follow this workflow:
 Do not declare completion unless the root cause is fixed, tests covering the issue pass, relevant checks pass, and the original problem is verified as resolved.
 
 Final response:
+
 - Root Cause
 - Fix
 - Tests Added/Updated
