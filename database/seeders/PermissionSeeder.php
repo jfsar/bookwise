@@ -40,10 +40,16 @@ class PermissionSeeder extends Seeder
             ['name' => 'view-invoices', 'description' => 'View customer invoices.'],
             ['name' => 'create-invoices', 'description' => 'Create customer invoices.'],
             ['name' => 'approve-invoices', 'description' => 'Approve and post customer invoices.'],
-            ['name' => 'void-invoices', 'description' => 'Void draft customer invoices.'],
+            ['name' => 'void-invoices', 'description' => 'Void draft, posted or partially paid customer invoices.'],
             ['name' => 'view-payments', 'description' => 'View customer payments.'],
             ['name' => 'create-payments', 'description' => 'Create customer payments.'],
+            ['name' => 'allocate-payments', 'description' => 'Allocate customer payments to invoices.'],
             ['name' => 'approve-payments', 'description' => 'Post customer payments to the ledger.'],
+            ['name' => 'void-payments', 'description' => 'Void draft or posted customer payments.'],
+            ['name' => 'view-credit-notes', 'description' => 'View customer credit notes.'],
+            ['name' => 'create-credit-notes', 'description' => 'Create customer credit notes.'],
+            ['name' => 'approve-credit-notes', 'description' => 'Post customer credit notes to the ledger.'],
+            ['name' => 'void-credit-notes', 'description' => 'Void draft customer credit notes.'],
         ];
 
         foreach ($permissions as $permission) {
@@ -91,6 +97,9 @@ class PermissionSeeder extends Seeder
                 'create-invoices',
                 'view-payments',
                 'create-payments',
+                'allocate-payments',
+                'view-credit-notes',
+                'create-credit-notes',
             ])->get());
         }
 
@@ -107,6 +116,7 @@ class PermissionSeeder extends Seeder
                 'view-customers',
                 'view-invoices',
                 'view-payments',
+                'view-credit-notes',
             ])->get());
         }
 

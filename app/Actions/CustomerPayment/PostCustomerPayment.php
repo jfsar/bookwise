@@ -3,25 +3,22 @@
 namespace App\Actions\CustomerPayment;
 
 use App\Actions\Action;
+use App\Actions\Concerns\PostsJournalEntries;
 use App\Actions\JournalEntry\PostJournalEntry;
 use App\Enums\CustomerPaymentStatus;
 use App\Enums\JournalEntryStatus;
 use App\Models\Account;
-use App\Models\AccountingPeriod;
 use App\Models\CustomerPayment;
-use App\Models\FiscalYear;
-use App\Models\Journal;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
-use App\Models\Organization;
 use App\Models\User;
 use App\Services\AuditLogService;
-use Carbon\Carbon;
+use App\Services\CustomerInvoiceSettlement;
 use Illuminate\Support\Facades\DB;
 
 class PostCustomerPayment
 {
-    use Action;
+    use Action, PostsJournalEntries;
 
     public function handle(CustomerPayment $payment, User $poster): CustomerPayment
     {
@@ -44,7 +41,7 @@ class PostCustomerPayment
 
             $organization = $payment->organization;
             $journal = $this->resolveJournal($organization);
-            [$fiscalYear, $period] = $this->resolvePeriod($organization, $payment->payment_date);
+            [$fiscalYear, $period] = $this->resolvePeriod($organization, $payment->payment_date, 'payment date');
 
             $entryNumber = $this->generateEntryNumber($organization, $journal, $payment->payment_date);
             $exchangeRate = (float) $payment->exchange_rate;
@@ -82,6 +79,8 @@ class PostCustomerPayment
                 'posted_at' => now(),
             ]);
 
+            $this->settleInvoices($payment, $poster);
+
             app(AuditLogService::class)->record(
                 $organization,
                 $poster->id,
@@ -94,6 +93,15 @@ class PostCustomerPayment
 
             return $payment->fresh()->load(['journalEntry']);
         });
+    }
+
+    /**
+     * When a payment posts, settle every invoice it is allocated against: paid
+     * amount and balance are derived from posted allocations (SRS INV-010/INV-012).
+     */
+    protected function settleInvoices(CustomerPayment $payment, User $poster): void
+    {
+        app(CustomerInvoiceSettlement::class)->reconcileForPayment($payment, $poster);
     }
 
     protected function createJournalLines(
@@ -138,63 +146,6 @@ class PostCustomerPayment
                 'reference' => $payment->payment_number,
             ]);
         }
-    }
-
-    protected function resolveJournal(Organization $organization): Journal
-    {
-        $journal = Journal::forOrganization($organization)
-            ->active()
-            ->where('code', 'GJ')
-            ->first();
-
-        if (! $journal) {
-            $journal = Journal::forOrganization($organization)->active()->first();
-        }
-
-        if (! $journal) {
-            throw new \RuntimeException('No active journal exists for this organization.');
-        }
-
-        return $journal;
-    }
-
-    /**
-     * @return array{0: FiscalYear, 1: AccountingPeriod}
-     */
-    protected function resolvePeriod(Organization $organization, Carbon $paymentDate): array
-    {
-        $fiscalYear = FiscalYear::forOrganization($organization)
-            ->open()
-            ->where('start_date', '<=', $paymentDate)
-            ->where('end_date', '>=', $paymentDate)
-            ->first();
-
-        if (! $fiscalYear) {
-            throw new \RuntimeException('No open fiscal year covers the payment date.');
-        }
-
-        $period = AccountingPeriod::forOrganization($organization)
-            ->open()
-            ->where('fiscal_year_id', $fiscalYear->id)
-            ->where('start_date', '<=', $paymentDate)
-            ->where('end_date', '>=', $paymentDate)
-            ->first();
-
-        if (! $period) {
-            throw new \RuntimeException('No open accounting period covers the payment date.');
-        }
-
-        return [$fiscalYear, $period];
-    }
-
-    protected function generateEntryNumber(Organization $organization, Journal $journal, Carbon $paymentDate): string
-    {
-        $sequence = JournalEntry::where('organization_id', $organization->id)
-            ->where('journal_id', $journal->id)
-            ->whereYear('entry_date', $paymentDate->year)
-            ->count() + 1;
-
-        return "{$journal->code}-{$paymentDate->year}-".str_pad($sequence, 6, '0', STR_PAD_LEFT);
     }
 
     public function rules(): array

@@ -1,0 +1,143 @@
+<?php
+
+namespace App\Reports;
+
+use App\Enums\CustomerInvoiceStatus;
+use App\Models\CustomerInvoice;
+use Carbon\Carbon;
+
+/**
+ * Accounts receivable aging report (§7.26).
+ *
+ * Buckets the outstanding balance of posted customer invoices by how long each
+ * invoice has been past its due date as of the report date: Current, 1-30,
+ * 31-60, 61-90, and 90+ days. Only posted invoices still carrying a balance
+ * are included; the report is derived from customer invoices rather than the
+ * ledger, so amounts are converted to the organization's base currency using
+ * each invoice's exchange rate.
+ */
+final class ArAgingReport extends ReportQuery
+{
+    /**
+     * @return array<string, mixed>
+     */
+    public function build(): array
+    {
+        $asOf = $this->asOf();
+
+        $invoices = CustomerInvoice::forOrganization($this->organization)
+            ->with('customer')
+            ->whereIn('status', [CustomerInvoiceStatus::Posted, CustomerInvoiceStatus::PartiallyPaid])
+            ->where('balance_due', '>', 0)
+            ->orderBy('customer_id')
+            ->orderBy('due_date')
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return $this->emptyResult($asOf);
+        }
+
+        $rows = [];
+        $totals = $this->zeroTotals();
+
+        foreach ($invoices->groupBy('customer_id') as $customerInvoices) {
+            $customer = $customerInvoices->first()->customer;
+            $bucket = $this->zeroTotals();
+
+            foreach ($customerInvoices as $invoice) {
+                $index = $this->bucketFor($invoice->due_date, $asOf);
+                $amount = $this->baseBalance($invoice);
+
+                $bucket[$index] += $amount;
+                $totals[$index] += $amount;
+            }
+
+            $bucket['total'] = $this->round($bucket['current'] + $bucket['days_1_30'] + $bucket['days_31_60'] + $bucket['days_61_90'] + $bucket['days_90_plus']);
+            $bucket = array_map(fn (float $value): float => $this->round($value), $bucket);
+
+            $rows[] = [
+                'customer' => [
+                    'id' => (int) $customer->id,
+                    'number' => $customer->customer_number,
+                    'name' => $customer->name,
+                ],
+                ...$bucket,
+            ];
+        }
+
+        $totals['total'] = $this->round($totals['current'] + $totals['days_1_30'] + $totals['days_31_60'] + $totals['days_61_90'] + $totals['days_90_plus']);
+        $totals = array_map(fn (float $value): float => $this->round($value), $totals);
+
+        return [
+            'rows' => $rows,
+            'totals' => $totals,
+            'as_of' => $asOf->toDateString(),
+        ];
+    }
+
+    protected function asOf(): Carbon
+    {
+        return $this->dateFilter('as_of') ?? now();
+    }
+
+    /**
+     * Outstanding balance converted to the organization's base currency.
+     */
+    protected function baseBalance(CustomerInvoice $invoice): float
+    {
+        return (float) $invoice->balance_due * (float) $invoice->exchange_rate;
+    }
+
+    /**
+     * Bucket key for an invoice given its due date and the report date.
+     */
+    protected function bucketFor(Carbon $dueDate, Carbon $asOf): string
+    {
+        $daysOverdue = (int) round(($asOf->startOfDay()->getTimestamp() - $dueDate->startOfDay()->getTimestamp()) / 86400);
+
+        if ($daysOverdue <= 0) {
+            return 'current';
+        }
+
+        if ($daysOverdue <= 30) {
+            return 'days_1_30';
+        }
+
+        if ($daysOverdue <= 60) {
+            return 'days_31_60';
+        }
+
+        if ($daysOverdue <= 90) {
+            return 'days_61_90';
+        }
+
+        return 'days_90_plus';
+    }
+
+    /**
+     * @return array{current: float, days_1_30: float, days_31_60: float, days_61_90: float, days_90_plus: float, total: float}
+     */
+    protected function zeroTotals(): array
+    {
+        return [
+            'current' => 0.0,
+            'days_1_30' => 0.0,
+            'days_31_60' => 0.0,
+            'days_61_90' => 0.0,
+            'days_90_plus' => 0.0,
+            'total' => 0.0,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function emptyResult(Carbon $asOf): array
+    {
+        return [
+            'rows' => [],
+            'totals' => $this->zeroTotals(),
+            'as_of' => $asOf->toDateString(),
+        ];
+    }
+}

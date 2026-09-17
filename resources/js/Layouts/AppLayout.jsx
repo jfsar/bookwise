@@ -4,6 +4,7 @@ import {
     BanknoteArrowDown,
     BookOpen,
     BookOpenCheck,
+    CalendarClock,
     CalendarRange,
     Contact,
     FileText,
@@ -15,6 +16,7 @@ import {
     ScrollText,
     Scale,
     ShieldCheck,
+    TicketPercent,
     Users,
     Wallet,
 } from 'lucide-react';
@@ -52,6 +54,7 @@ const navigation = [
             { label: 'Customers', href: '/customers', icon: Contact },
             { label: 'Invoices', href: '/invoices', icon: Wallet },
             { label: 'Payments', href: '/payments', icon: Banknote },
+            { label: 'Credit Notes', href: '/credit-notes', icon: TicketPercent },
         ],
     },
     {
@@ -62,6 +65,7 @@ const navigation = [
             { label: 'Income Statement', href: '/reports/income-statement', icon: ListChecks },
             { label: 'Balance Sheet', href: '/reports/balance-sheet', icon: Wallet },
             { label: 'Cash Flow', href: '/reports/cash-flow', icon: BanknoteArrowDown },
+            { label: 'AR Aging', href: '/reports/ar-aging', icon: CalendarClock },
             { label: 'Fiscal Years', href: '/fiscal-years', icon: CalendarRange },
             { label: 'Period Closing', href: '/period-closing', icon: Lock },
         ],

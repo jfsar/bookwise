@@ -3,6 +3,7 @@
 namespace App\Actions\JournalEntry;
 
 use App\Actions\Action;
+use App\Actions\Concerns\PostsJournalEntries;
 use App\Enums\JournalEntryStatus;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class ReverseJournalEntry
 {
-    use Action;
+    use Action, PostsJournalEntries;
 
     public function handle(JournalEntry $entry, User $reverser, string $reason): JournalEntry
     {
@@ -28,7 +29,7 @@ class ReverseJournalEntry
                 'journal_id' => $entry->journal_id,
                 'fiscal_year_id' => $entry->fiscal_year_id,
                 'accounting_period_id' => $entry->accounting_period_id,
-                'entry_number' => $this->generateReversalNumber($entry),
+                'entry_number' => $this->generateEntryNumber($entry->organization, $entry->journal, now()),
                 'entry_date' => now()->toDateString(),
                 'description' => "Reversal of {$entry->entry_number}: {$reason}",
                 'reference' => $entry->entry_number,
@@ -79,18 +80,6 @@ class ReverseJournalEntry
 
             return $reversalEntry;
         });
-    }
-
-    protected function generateReversalNumber(JournalEntry $entry): string
-    {
-        $prefix = $entry->journal->code;
-        $year = now()->format('Y');
-        $sequence = JournalEntry::where('organization_id', $entry->organization_id)
-            ->where('journal_id', $entry->journal_id)
-            ->whereYear('entry_date', $year)
-            ->count() + 1;
-
-        return "{$prefix}-{$year}-".str_pad($sequence, 6, '0', STR_PAD_LEFT);
     }
 
     public function rules(): array

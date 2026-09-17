@@ -23,8 +23,18 @@ class CustomerPaymentPolicy
         return $user->hasPermissionTo('create-payments', $organization);
     }
 
+    public function allocate(User $user, CustomerPayment $payment): bool
+    {
+        return $user->hasPermissionTo('allocate-payments', $payment->organization);
+    }
+
     public function post(User $user, CustomerPayment $payment): bool
     {
         return $user->hasPermissionTo('approve-payments', $payment->organization);
+    }
+
+    public function void(User $user, CustomerPayment $payment): bool
+    {
+        return $user->hasPermissionTo('void-payments', $payment->organization);
     }
 }

@@ -3,24 +3,20 @@
 namespace App\Actions\CustomerInvoice;
 
 use App\Actions\Action;
+use App\Actions\Concerns\PostsJournalEntries;
 use App\Actions\JournalEntry\PostJournalEntry;
 use App\Enums\CustomerInvoiceStatus;
 use App\Enums\JournalEntryStatus;
-use App\Models\AccountingPeriod;
 use App\Models\CustomerInvoice;
-use App\Models\FiscalYear;
-use App\Models\Journal;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
-use App\Models\Organization;
 use App\Models\User;
 use App\Services\AuditLogService;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class PostCustomerInvoice
 {
-    use Action;
+    use Action, PostsJournalEntries;
 
     public function handle(CustomerInvoice $invoice, User $poster): CustomerInvoice
     {
@@ -37,7 +33,7 @@ class PostCustomerInvoice
 
             $organization = $invoice->organization;
             $journal = $this->resolveJournal($organization);
-            [$fiscalYear, $period] = $this->resolvePeriod($organization, $invoice->invoice_date);
+            [$fiscalYear, $period] = $this->resolvePeriod($organization, $invoice->invoice_date, 'invoice date');
 
             $entryNumber = $this->generateEntryNumber($organization, $journal, $invoice->invoice_date);
             $exchangeRate = (float) $invoice->exchange_rate;
@@ -157,63 +153,6 @@ class PostCustomerInvoice
         }
 
         return $lines;
-    }
-
-    protected function resolveJournal(Organization $organization): Journal
-    {
-        $journal = Journal::forOrganization($organization)
-            ->active()
-            ->where('code', 'GJ')
-            ->first();
-
-        if (! $journal) {
-            $journal = Journal::forOrganization($organization)->active()->first();
-        }
-
-        if (! $journal) {
-            throw new \RuntimeException('No active journal exists for this organization.');
-        }
-
-        return $journal;
-    }
-
-    /**
-     * @return array{0: FiscalYear, 1: AccountingPeriod}
-     */
-    protected function resolvePeriod(Organization $organization, Carbon $invoiceDate): array
-    {
-        $fiscalYear = FiscalYear::forOrganization($organization)
-            ->open()
-            ->where('start_date', '<=', $invoiceDate)
-            ->where('end_date', '>=', $invoiceDate)
-            ->first();
-
-        if (! $fiscalYear) {
-            throw new \RuntimeException('No open fiscal year covers the invoice date.');
-        }
-
-        $period = AccountingPeriod::forOrganization($organization)
-            ->open()
-            ->where('fiscal_year_id', $fiscalYear->id)
-            ->where('start_date', '<=', $invoiceDate)
-            ->where('end_date', '>=', $invoiceDate)
-            ->first();
-
-        if (! $period) {
-            throw new \RuntimeException('No open accounting period covers the invoice date.');
-        }
-
-        return [$fiscalYear, $period];
-    }
-
-    protected function generateEntryNumber(Organization $organization, Journal $journal, Carbon $invoiceDate): string
-    {
-        $sequence = JournalEntry::where('organization_id', $organization->id)
-            ->where('journal_id', $journal->id)
-            ->whereYear('entry_date', $invoiceDate->year)
-            ->count() + 1;
-
-        return "{$journal->code}-{$invoiceDate->year}-".str_pad($sequence, 6, '0', STR_PAD_LEFT);
     }
 
     public function rules(): array

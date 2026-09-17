@@ -12,4 +12,9 @@ enum CustomerPaymentStatus: string
     {
         return $this === self::Draft;
     }
+
+    public function isVoidable(): bool
+    {
+        return in_array($this, [self::Draft, self::Posted], true);
+    }
 }
