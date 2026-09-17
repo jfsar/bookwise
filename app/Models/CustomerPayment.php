@@ -118,6 +118,20 @@ class CustomerPayment extends Model
         return $this->hasMany(CustomerPaymentAllocation::class, 'payment_id');
     }
 
+    public function totalAllocated(): float
+    {
+        $total = $this->relationLoaded('allocations')
+            ? $this->allocations->sum('amount')
+            : $this->allocations()->sum('amount');
+
+        return round((float) $total, 4);
+    }
+
+    public function remainingAllocatable(): float
+    {
+        return round((float) $this->amount - $this->totalAllocated(), 4);
+    }
+
     public function scopeForOrganization(Builder $query, Organization $organization): Builder
     {
         return $query->where('organization_id', $organization->id);

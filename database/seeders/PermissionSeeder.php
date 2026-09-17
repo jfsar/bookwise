@@ -43,6 +43,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'void-invoices', 'description' => 'Void draft customer invoices.'],
             ['name' => 'view-payments', 'description' => 'View customer payments.'],
             ['name' => 'create-payments', 'description' => 'Create customer payments.'],
+            ['name' => 'allocate-payments', 'description' => 'Allocate customer payments to invoices.'],
             ['name' => 'approve-payments', 'description' => 'Post customer payments to the ledger.'],
         ];
 
@@ -91,6 +92,7 @@ class PermissionSeeder extends Seeder
                 'create-invoices',
                 'view-payments',
                 'create-payments',
+                'allocate-payments',
             ])->get());
         }
 

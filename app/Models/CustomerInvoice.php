@@ -138,6 +138,11 @@ class CustomerInvoice extends Model
         return $this->hasMany(CustomerInvoiceLine::class, 'invoice_id');
     }
 
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(CustomerPaymentAllocation::class, 'invoice_id');
+    }
+
     public function scopeForOrganization(Builder $query, Organization $organization): Builder
     {
         return $query->where('organization_id', $organization->id);

@@ -4,11 +4,14 @@ namespace App\Actions\CustomerPayment;
 
 use App\Actions\Action;
 use App\Actions\JournalEntry\PostJournalEntry;
+use App\Enums\CustomerInvoiceStatus;
 use App\Enums\CustomerPaymentStatus;
 use App\Enums\JournalEntryStatus;
 use App\Models\Account;
 use App\Models\AccountingPeriod;
+use App\Models\CustomerInvoice;
 use App\Models\CustomerPayment;
+use App\Models\CustomerPaymentAllocation;
 use App\Models\FiscalYear;
 use App\Models\Journal;
 use App\Models\JournalEntry;
@@ -82,6 +85,8 @@ class PostCustomerPayment
                 'posted_at' => now(),
             ]);
 
+            $this->reconcileAllocations($payment, $poster);
+
             app(AuditLogService::class)->record(
                 $organization,
                 $poster->id,
@@ -94,6 +99,63 @@ class PostCustomerPayment
 
             return $payment->fresh()->load(['journalEntry']);
         });
+    }
+
+    /**
+     * When a payment posts, settle every invoice it is allocated against: paid
+     * amount and balance are derived from posted allocations (SRS INV-010/INV-012)
+     * and the invoice flips to partially paid or paid.
+     */
+    protected function reconcileAllocations(CustomerPayment $payment, User $poster): void
+    {
+        $invoiceIds = CustomerPaymentAllocation::forOrganization($payment->organization)
+            ->where('payment_id', $payment->id)
+            ->pluck('invoice_id');
+
+        if ($invoiceIds->isEmpty()) {
+            return;
+        }
+
+        $invoices = CustomerInvoice::forOrganization($payment->organization)
+            ->whereIn('id', $invoiceIds)
+            ->get();
+
+        foreach ($invoices as $invoice) {
+            $allocated = round((float) CustomerPaymentAllocation::forOrganization($payment->organization)
+                ->where('invoice_id', $invoice->id)
+                ->whereHas('payment', fn ($query) => $query->where('status', CustomerPaymentStatus::Posted))
+                ->sum('amount'), 4);
+
+            $paid = min((float) $invoice->total_amount, $allocated);
+            $balanceDue = round((float) $invoice->total_amount - $paid, 4);
+
+            $status = $balanceDue <= 0.0001
+                ? CustomerInvoiceStatus::Paid
+                : ($paid > 0 ? CustomerInvoiceStatus::PartiallyPaid : $invoice->status);
+
+            $previous = [
+                'status' => $invoice->status->value,
+                'paid_amount' => (float) $invoice->paid_amount,
+                'balance_due' => (float) $invoice->balance_due,
+            ];
+
+            $invoice->update([
+                'paid_amount' => round($paid, 4),
+                'balance_due' => $balanceDue,
+                'status' => $status,
+                'updated_by' => $poster->id,
+            ]);
+
+            app(AuditLogService::class)->record(
+                $payment->organization,
+                $poster->id,
+                'customer-invoice.allocated',
+                CustomerInvoice::class,
+                $invoice->id,
+                $previous,
+                ['status' => $status->value, 'paid_amount' => $paid, 'balance_due' => $balanceDue]
+            );
+        }
     }
 
     protected function createJournalLines(

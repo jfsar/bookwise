@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read int $created_by
  * @property-read CustomerPayment $payment
  * @property-read CustomerInvoice $invoice
+ * @property-read User $creator
  */
 class CustomerPaymentAllocation extends Model
 {
@@ -49,5 +51,15 @@ class CustomerPaymentAllocation extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(CustomerInvoice::class, 'invoice_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function scopeForOrganization(Builder $query, Organization $organization): Builder
+    {
+        return $query->where('organization_id', $organization->id);
     }
 }

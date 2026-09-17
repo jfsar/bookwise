@@ -55,6 +55,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/payments', [CustomerPaymentController::class, 'index'])->name('payments.index');
     Route::post('/payments', [CustomerPaymentController::class, 'store'])->name('payments.store')->middleware('password.confirm');
+    Route::post('/payments/{customerPayment}/allocate', [CustomerPaymentController::class, 'allocate'])->name('payments.allocate');
     Route::post('/payments/{customerPayment}/post', [CustomerPaymentController::class, 'post'])->name('payments.post');
 
     Route::get('/period-closing', [PeriodClosingController::class, 'index'])->name('period-closing.index');
