@@ -12,6 +12,7 @@ use App\Models\CustomerInvoice;
 use App\Models\CustomerInvoiceLine;
 use App\Models\FiscalYear;
 use App\Models\Journal;
+use App\Models\JournalEntry;
 use App\Models\Organization;
 use App\Models\Permission;
 use App\Models\Role;
@@ -431,7 +432,32 @@ class CustomerInvoiceTest extends TestCase
             ->assertStatus(403);
     }
 
-    public function test_void_rejects_non_draft_invoice(): void
+    public function test_void_rejects_paid_invoice(): void
+    {
+        $user = User::factory()->create();
+        [$org, $revenue, , $customer, $currencyId] = $this->postingSetup();
+        $this->attachRoleWithPermission($user, $org, 'void-invoices');
+
+        $invoice = CustomerInvoice::factory()->create([
+            'organization_id' => $org->id,
+            'customer_id' => $customer->id,
+            'created_by' => User::factory()->create()->id,
+            'currency_id' => $currencyId,
+            'base_currency_id' => $org->base_currency_id,
+            'status' => CustomerInvoiceStatus::Paid,
+            'paid_amount' => 100,
+            'balance_due' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->post("/invoices/{$invoice->id}/void", ['reason' => 'Too late'])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Paid invoices cannot be voided.');
+
+        $this->assertSame(CustomerInvoiceStatus::Paid, $invoice->fresh()->status);
+    }
+
+    public function test_void_rejects_posted_invoice_without_journal_entry(): void
     {
         $user = User::factory()->create();
         [$org, $revenue, , $customer, $currencyId] = $this->postingSetup();
@@ -448,7 +474,60 @@ class CustomerInvoiceTest extends TestCase
         $this->actingAs($user)
             ->post("/invoices/{$invoice->id}/void", ['reason' => 'Too late'])
             ->assertRedirect()
-            ->assertSessionHas('error', 'Only draft invoices can be voided.');
+            ->assertSessionHas('error', 'A posted journal entry is required to void a posted invoice.');
+    }
+
+    public function test_void_posted_invoice_creates_reversal_entry(): void
+    {
+        $creator = User::factory()->create();
+        $poster = User::factory()->create();
+        $voider = User::factory()->create();
+        [$org, $revenue, , $customer, $currencyId] = $this->postingSetup();
+        $this->attachRoleWithPermission($creator, $org, 'create-invoices');
+        $this->attachRoleWithPermission($poster, $org, 'approve-invoices');
+        $this->attachRoleWithPermission($voider, $org, 'void-invoices');
+
+        $invoice = $this->createDraftInvoice($org, $creator, $revenue->id, $customer->id, $currencyId);
+
+        $this->actingAs($poster)
+            ->post("/invoices/{$invoice->id}/post")
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Invoice posted to ledger.');
+
+        $invoice->refresh();
+        $originalEntryId = $invoice->journal_entry_id;
+
+        $this->actingAs($voider)
+            ->post("/invoices/{$invoice->id}/void", ['reason' => 'Posted in error'])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Invoice voided.');
+
+        $invoice->refresh();
+        $this->assertSame(CustomerInvoiceStatus::Voided, $invoice->status);
+        $this->assertSame(0.0, (float) $invoice->balance_due);
+        $this->assertSame('Posted in error', $invoice->void_reason);
+        $this->assertNotNull($invoice->voided_at);
+
+        $this->assertDatabaseHas('journal_entries', [
+            'organization_id' => $org->id,
+            'status' => 'draft',
+            'reversal_of_id' => $originalEntryId,
+            'total_debit' => 100.0,
+            'total_credit' => 100.0,
+        ]);
+
+        $this->assertDatabaseHas('journal_entries', [
+            'id' => $originalEntryId,
+            'status' => 'reversed',
+            'reversal_reason' => 'Posted in error',
+        ]);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'organization_id' => $org->id,
+            'action' => 'journal-entry.reversed',
+            'auditable_type' => JournalEntry::class,
+            'auditable_id' => $originalEntryId,
+        ]);
     }
 
     public function test_void_returns_404_for_cross_organization_invoice(): void

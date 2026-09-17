@@ -661,7 +661,11 @@ class CustomerCreditNoteTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success', 'Credit note voided.');
 
-        $this->assertSame(CustomerCreditNoteStatus::Voided, $creditNote->fresh()->status);
+        $creditNote->refresh();
+        $this->assertSame(CustomerCreditNoteStatus::Voided, $creditNote->status);
+        $this->assertSame('Created in error', $creditNote->void_reason);
+        $this->assertNotNull($creditNote->voided_at);
+        $this->assertSame($user->id, $creditNote->voided_by);
 
         $this->assertDatabaseHas('audit_logs', [
             'organization_id' => $org->id,

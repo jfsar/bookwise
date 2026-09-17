@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use App\Enums\AccountingPeriodStatus;
+use App\Enums\CustomerInvoiceStatus;
 use App\Enums\CustomerPaymentStatus;
 use App\Enums\FiscalYearStatus;
 use App\Models\Account;
 use App\Models\AccountingPeriod;
 use App\Models\Customer;
+use App\Models\CustomerInvoice;
 use App\Models\CustomerPayment;
 use App\Models\FiscalYear;
 use App\Models\Journal;
@@ -429,5 +431,155 @@ class CustomerPaymentTest extends TestCase
             ->post("/payments/{$payment->id}/post")
             ->assertRedirect()
             ->assertSessionHas('error', 'Unable to post the payment. Please try again.');
+    }
+
+    // ─── Void Tests ───────────────────────────────────────────────────────
+
+    public function test_void_draft_payment_with_reason(): void
+    {
+        $creator = User::factory()->create();
+        $voider = User::factory()->create();
+        [$org, , $cash, $customer, $currencyId] = $this->postingSetup();
+        $this->attachRoleWithPermission($creator, $org, ['create-payments']);
+        $this->attachRoleWithPermission($voider, $org, 'void-payments');
+
+        $payment = $this->createDraftPayment($org, $creator, $customer->id, $currencyId, $cash->id);
+
+        $this->actingAs($voider)
+            ->post("/payments/{$payment->id}/void", ['reason' => 'Created in error'])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Payment voided.');
+
+        $payment->refresh();
+        $this->assertSame(CustomerPaymentStatus::Voided, $payment->status);
+        $this->assertNull($payment->journal_entry_id);
+        $this->assertSame('Created in error', $payment->void_reason);
+        $this->assertNotNull($payment->voided_at);
+        $this->assertSame($voider->id, $payment->voided_by);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'organization_id' => $org->id,
+            'action' => 'customer-payment.voided',
+            'auditable_type' => CustomerPayment::class,
+            'auditable_id' => $payment->id,
+        ]);
+    }
+
+    public function test_void_requires_reason(): void
+    {
+        $creator = User::factory()->create();
+        $voider = User::factory()->create();
+        [$org, , $cash, $customer, $currencyId] = $this->postingSetup();
+        $this->attachRoleWithPermission($creator, $org, ['create-payments']);
+        $this->attachRoleWithPermission($voider, $org, 'void-payments');
+
+        $payment = $this->createDraftPayment($org, $creator, $customer->id, $currencyId, $cash->id);
+
+        $this->actingAs($voider)
+            ->post("/payments/{$payment->id}/void", [])
+            ->assertRedirect()
+            ->assertSessionHasErrors(['reason']);
+    }
+
+    public function test_void_forbids_user_without_permission(): void
+    {
+        $creator = User::factory()->create();
+        $user = User::factory()->create();
+        [$org, , $cash, $customer, $currencyId] = $this->postingSetup();
+        $this->attachRoleWithPermission($creator, $org, ['create-payments']);
+        $this->attachRoleWithPermission($user, $org, []);
+
+        $payment = $this->createDraftPayment($org, $creator, $customer->id, $currencyId, $cash->id);
+
+        $this->actingAs($user)
+            ->post("/payments/{$payment->id}/void", ['reason' => 'test'])
+            ->assertStatus(403);
+    }
+
+    public function test_void_rejects_already_voided_payment(): void
+    {
+        $creator = User::factory()->create();
+        $voider = User::factory()->create();
+        [$org, , $cash, $customer, $currencyId] = $this->postingSetup();
+        $this->attachRoleWithPermission($creator, $org, ['create-payments']);
+        $this->attachRoleWithPermission($voider, $org, 'void-payments');
+
+        $payment = $this->createDraftPayment($org, $creator, $customer->id, $currencyId, $cash->id);
+        $payment->update(['status' => CustomerPaymentStatus::Voided]);
+
+        $this->actingAs($voider)
+            ->post("/payments/{$payment->id}/void", ['reason' => 'test'])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Only draft or posted payments can be voided.');
+    }
+
+    public function test_void_posted_payment_reverses_entry_and_restores_invoice(): void
+    {
+        $creator = User::factory()->create();
+        $allocator = User::factory()->create();
+        $poster = User::factory()->create();
+        $voider = User::factory()->create();
+        [$org, $receivable, $cash, $customer, $currencyId] = $this->postingSetup();
+        $this->attachRoleWithPermission($creator, $org, ['create-payments']);
+        $this->attachRoleWithPermission($allocator, $org, 'allocate-payments');
+        $this->attachRoleWithPermission($poster, $org, 'approve-payments');
+        $this->attachRoleWithPermission($voider, $org, 'void-payments');
+
+        $invoice = CustomerInvoice::factory()->posted()->create([
+            'organization_id' => $org->id,
+            'customer_id' => $customer->id,
+            'created_by' => $creator->id,
+            'currency_id' => $currencyId,
+            'base_currency_id' => $org->base_currency_id,
+            'subtotal' => 100,
+            'discount_amount' => 0,
+            'tax_amount' => 0,
+            'total_amount' => 100,
+            'paid_amount' => 0,
+            'balance_due' => 100,
+        ]);
+
+        $payment = $this->createDraftPayment($org, $creator, $customer->id, $currencyId, $cash->id);
+
+        $this->actingAs($allocator)
+            ->post("/payments/{$payment->id}/allocate", ['allocations' => [['invoice_id' => $invoice->id, 'amount' => 100]]])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Payment allocation saved.');
+
+        $this->actingAs($poster)
+            ->post("/payments/{$payment->id}/post")
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Payment posted to ledger.');
+
+        $payment->refresh();
+        $this->assertSame(CustomerInvoiceStatus::Paid, $invoice->fresh()->status);
+        $originalEntryId = $payment->journal_entry_id;
+
+        $this->actingAs($voider)
+            ->post("/payments/{$payment->id}/void", ['reason' => 'Duplicate payment'])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Payment voided.');
+
+        $payment->refresh();
+        $this->assertSame(CustomerPaymentStatus::Voided, $payment->status);
+        $this->assertSame('Duplicate payment', $payment->void_reason);
+        $this->assertNotNull($payment->voided_at);
+
+        $this->assertDatabaseHas('journal_entries', [
+            'organization_id' => $org->id,
+            'status' => 'draft',
+            'reversal_of_id' => $originalEntryId,
+        ]);
+
+        $this->assertDatabaseHas('journal_entries', [
+            'id' => $originalEntryId,
+            'status' => 'reversed',
+            'reversal_reason' => 'Duplicate payment',
+        ]);
+
+        $invoice->refresh();
+        $this->assertSame(CustomerInvoiceStatus::Posted, $invoice->status);
+        $this->assertSame(0.0, (float) $invoice->paid_amount);
+        $this->assertSame(100.0, (float) $invoice->balance_due);
     }
 }

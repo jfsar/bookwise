@@ -18,6 +18,6 @@ enum CustomerInvoiceStatus: string
 
     public function isVoidable(): bool
     {
-        return $this === self::Draft;
+        return in_array($this, [self::Draft, self::Posted, self::PartiallyPaid], true);
     }
 }

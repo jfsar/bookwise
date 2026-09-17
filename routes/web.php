@@ -58,6 +58,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/payments', [CustomerPaymentController::class, 'store'])->name('payments.store')->middleware('password.confirm');
     Route::post('/payments/{customerPayment}/allocate', [CustomerPaymentController::class, 'allocate'])->name('payments.allocate');
     Route::post('/payments/{customerPayment}/post', [CustomerPaymentController::class, 'post'])->name('payments.post');
+    Route::post('/payments/{customerPayment}/void', [CustomerPaymentController::class, 'void'])->name('payments.void');
 
     Route::get('/credit-notes', [CustomerCreditNoteController::class, 'index'])->name('credit-notes.index');
     Route::post('/credit-notes', [CustomerCreditNoteController::class, 'store'])->name('credit-notes.store')->middleware('password.confirm');

@@ -24,6 +24,10 @@ class VoidCustomerCreditNote
 
             $creditNote->update([
                 'status' => CustomerCreditNoteStatus::Voided,
+                'voided_at' => now(),
+                'voided_by' => $voider->id,
+                'void_reason' => $reason,
+                'updated_by' => $voider->id,
             ]);
 
             app(AuditLogService::class)->record(

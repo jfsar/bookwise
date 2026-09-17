@@ -102,6 +102,7 @@ class DashboardMetricsService
         $invoices = DB::table('customer_invoices')
             ->where('organization_id', $organization->id)
             ->whereNull('voided_at')
+            ->whereIn('status', ['posted', 'partially_paid'])
             ->selectRaw('COALESCE(SUM(CASE WHEN balance_due > 0 THEN balance_due ELSE 0 END), 0) as total')
             ->selectRaw('COUNT(*) FILTER (WHERE balance_due > 0) as open')
             ->selectRaw('COUNT(*) FILTER (WHERE balance_due > 0 AND due_date < ?) as overdue', [$today])

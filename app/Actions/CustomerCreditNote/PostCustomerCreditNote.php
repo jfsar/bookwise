@@ -3,18 +3,15 @@
 namespace App\Actions\CustomerCreditNote;
 
 use App\Actions\Action;
+use App\Actions\Concerns\PostsJournalEntries;
 use App\Actions\JournalEntry\PostJournalEntry;
 use App\Enums\CustomerCreditNoteStatus;
 use App\Enums\CustomerInvoiceStatus;
 use App\Enums\JournalEntryStatus;
-use App\Models\AccountingPeriod;
 use App\Models\CustomerCreditNote;
 use App\Models\CustomerInvoice;
-use App\Models\FiscalYear;
-use App\Models\Journal;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
-use App\Models\Organization;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Carbon\Carbon;
@@ -22,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 
 class PostCustomerCreditNote
 {
-    use Action;
+    use Action, PostsJournalEntries;
 
     public function handle(CustomerCreditNote $creditNote, User $poster): CustomerCreditNote
     {
@@ -62,7 +59,7 @@ class PostCustomerCreditNote
 
             $organization = $creditNote->organization;
             $journal = $this->resolveJournal($organization);
-            [$fiscalYear, $period] = $this->resolvePeriod($organization, Carbon::parse($creditNote->date));
+            [$fiscalYear, $period] = $this->resolvePeriod($organization, Carbon::parse($creditNote->date), 'credit note date');
 
             $entryNumber = $this->generateEntryNumber($organization, $journal, Carbon::parse($creditNote->date));
             $exchangeRate = (float) $creditNote->exchange_rate;
@@ -231,63 +228,6 @@ class PostCustomerCreditNote
         }
 
         return $lines;
-    }
-
-    protected function resolveJournal(Organization $organization): Journal
-    {
-        $journal = Journal::forOrganization($organization)
-            ->active()
-            ->where('code', 'GJ')
-            ->first();
-
-        if (! $journal) {
-            $journal = Journal::forOrganization($organization)->active()->first();
-        }
-
-        if (! $journal) {
-            throw new \RuntimeException('No active journal exists for this organization.');
-        }
-
-        return $journal;
-    }
-
-    /**
-     * @return array{0: FiscalYear, 1: AccountingPeriod}
-     */
-    protected function resolvePeriod(Organization $organization, Carbon $date): array
-    {
-        $fiscalYear = FiscalYear::forOrganization($organization)
-            ->open()
-            ->where('start_date', '<=', $date)
-            ->where('end_date', '>=', $date)
-            ->first();
-
-        if (! $fiscalYear) {
-            throw new \RuntimeException('No open fiscal year covers the credit note date.');
-        }
-
-        $period = AccountingPeriod::forOrganization($organization)
-            ->open()
-            ->where('fiscal_year_id', $fiscalYear->id)
-            ->where('start_date', '<=', $date)
-            ->where('end_date', '>=', $date)
-            ->first();
-
-        if (! $period) {
-            throw new \RuntimeException('No open accounting period covers the credit note date.');
-        }
-
-        return [$fiscalYear, $period];
-    }
-
-    protected function generateEntryNumber(Organization $organization, Journal $journal, Carbon $date): string
-    {
-        $sequence = JournalEntry::where('organization_id', $organization->id)
-            ->where('journal_id', $journal->id)
-            ->whereYear('entry_date', $date->year)
-            ->count() + 1;
-
-        return "{$journal->code}-{$date->year}-".str_pad($sequence, 6, '0', STR_PAD_LEFT);
     }
 
     public function rules(): array

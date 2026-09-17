@@ -31,6 +31,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read CustomerPaymentStatus $status
  * @property-read string|null $notes
  * @property-read Carbon|null $posted_at
+ * @property-read Carbon|null $voided_at
+ * @property-read int|null $voided_by
+ * @property-read string|null $void_reason
  * @property-read string|null $idempotency_key
  * @property-read int $created_by
  * @property-read Organization $organization
@@ -40,6 +43,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Account|null $cashAccount
  * @property-read JournalEntry|null $journalEntry
  * @property-read User $creator
+ * @property-read User|null $voider
  */
 class CustomerPayment extends Model
 {
@@ -63,6 +67,9 @@ class CustomerPayment extends Model
         'status',
         'notes',
         'posted_at',
+        'voided_at',
+        'voided_by',
+        'void_reason',
         'idempotency_key',
         'created_by',
     ];
@@ -75,6 +82,7 @@ class CustomerPayment extends Model
             'amount' => 'decimal:4',
             'status' => CustomerPaymentStatus::class,
             'posted_at' => 'datetime',
+            'voided_at' => 'datetime',
         ];
     }
 
@@ -111,6 +119,11 @@ class CustomerPayment extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function voider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'voided_by');
     }
 
     public function allocations(): HasMany

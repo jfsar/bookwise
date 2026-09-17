@@ -106,6 +106,11 @@ export default function CustomerPaymentsIndex() {
                                                     Post
                                                 </Button>
                                             )}
+                                            {payment.can?.void && (
+                                                <Button size="sm" variant="outline" className="text-warning" onClick={() => window.confirm('Void this payment? This cannot be undone.') && router.post(`/payments/${payment.id}/void`, { reason: 'Voided by user.' })}>
+                                                    Void
+                                                </Button>
+                                            )}
                                         </div>
                                     </TableCell>
                                 </TableRow>

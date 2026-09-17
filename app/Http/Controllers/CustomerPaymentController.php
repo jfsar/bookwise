@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Actions\CustomerPayment\AllocateCustomerPayment;
 use App\Actions\CustomerPayment\CreateCustomerPayment;
 use App\Actions\CustomerPayment\PostCustomerPayment;
+use App\Actions\CustomerPayment\VoidCustomerPayment;
 use App\Actions\Organization\SwitchOrganization;
 use App\Enums\CustomerInvoiceStatus;
 use App\Enums\CustomerPaymentStatus;
 use App\Http\Requests\AllocateCustomerPaymentRequest;
 use App\Http\Requests\StoreCustomerPaymentRequest;
+use App\Http\Requests\VoidCustomerPaymentRequest;
 use App\Models\Account;
 use App\Models\Currency;
 use App\Models\Customer;
@@ -182,6 +184,33 @@ class CustomerPaymentController extends Controller
         }
     }
 
+    public function void(VoidCustomerPaymentRequest $request, CustomerPayment $customerPayment): RedirectResponse
+    {
+        $organization = SwitchOrganization::current($request->user());
+
+        if (! $organization) {
+            return back()->with('error', 'No organization selected.');
+        }
+
+        if ($customerPayment->organization_id !== $organization->id) {
+            abort(404);
+        }
+
+        $this->authorize('void', $customerPayment);
+
+        try {
+            (new VoidCustomerPayment)->handle($customerPayment, $request->user(), $request->input('reason'));
+
+            return back()->with('success', 'Payment voided.');
+        } catch (QueryException $e) {
+            logger()->error('Failed to void customer payment.', ['payment_id' => $customerPayment->id, 'exception' => $e]);
+
+            return back()->with('error', 'Unable to void the payment. Please try again.');
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -216,6 +245,7 @@ class CustomerPaymentController extends Controller
             'can' => [
                 'post' => $user->can('post', $payment),
                 'allocate' => $payment->isDraft() && $user->can('allocate', $payment),
+                'void' => ($payment->isDraft() || $payment->isPosted()) && $user->can('void', $payment),
             ],
             'allocable_invoices' => $payment->isDraft() ? $this->allocableInvoices($payment, $organization) : [],
         ];

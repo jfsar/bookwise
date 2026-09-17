@@ -32,4 +32,9 @@ class CustomerPaymentPolicy
     {
         return $user->hasPermissionTo('approve-payments', $payment->organization);
     }
+
+    public function void(User $user, CustomerPayment $payment): bool
+    {
+        return $user->hasPermissionTo('void-payments', $payment->organization);
+    }
 }

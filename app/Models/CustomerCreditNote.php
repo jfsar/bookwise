@@ -28,6 +28,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read int|null $journal_entry_id
  * @property-read CustomerCreditNoteStatus $status
  * @property-read Carbon|null $posted_at
+ * @property-read Carbon|null $voided_at
+ * @property-read int|null $voided_by
+ * @property-read string|null $void_reason
  * @property-read string|null $idempotency_key
  * @property-read int $created_by
  * @property-read Organization $organization
@@ -36,6 +39,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read Currency $currency
  * @property-read JournalEntry|null $journalEntry
  * @property-read User $creator
+ * @property-read User|null $voider
  */
 class CustomerCreditNote extends Model
 {
@@ -57,6 +61,9 @@ class CustomerCreditNote extends Model
         'journal_entry_id',
         'status',
         'posted_at',
+        'voided_at',
+        'voided_by',
+        'void_reason',
         'idempotency_key',
         'created_by',
     ];
@@ -71,6 +78,7 @@ class CustomerCreditNote extends Model
             'total_amount' => 'decimal:4',
             'status' => CustomerCreditNoteStatus::class,
             'posted_at' => 'datetime',
+            'voided_at' => 'datetime',
         ];
     }
 
@@ -102,6 +110,11 @@ class CustomerCreditNote extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function voider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'voided_by');
     }
 
     public function scopeForOrganization(Builder $query, Organization $organization): Builder
