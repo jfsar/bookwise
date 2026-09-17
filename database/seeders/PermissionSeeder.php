@@ -45,6 +45,10 @@ class PermissionSeeder extends Seeder
             ['name' => 'create-payments', 'description' => 'Create customer payments.'],
             ['name' => 'allocate-payments', 'description' => 'Allocate customer payments to invoices.'],
             ['name' => 'approve-payments', 'description' => 'Post customer payments to the ledger.'],
+            ['name' => 'view-credit-notes', 'description' => 'View customer credit notes.'],
+            ['name' => 'create-credit-notes', 'description' => 'Create customer credit notes.'],
+            ['name' => 'approve-credit-notes', 'description' => 'Post customer credit notes to the ledger.'],
+            ['name' => 'void-credit-notes', 'description' => 'Void draft customer credit notes.'],
         ];
 
         foreach ($permissions as $permission) {
@@ -93,6 +97,8 @@ class PermissionSeeder extends Seeder
                 'view-payments',
                 'create-payments',
                 'allocate-payments',
+                'view-credit-notes',
+                'create-credit-notes',
             ])->get());
         }
 
@@ -109,6 +115,7 @@ class PermissionSeeder extends Seeder
                 'view-customers',
                 'view-invoices',
                 'view-payments',
+                'view-credit-notes',
             ])->get());
         }
 

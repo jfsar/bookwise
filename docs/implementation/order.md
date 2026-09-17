@@ -31,9 +31,13 @@ This log tracks SRS requirement execution (see `SRS.md`). Only entries with **St
 
 ### 4.5 Customer Credit Notes (SRS §7.27)
 
-**Status:** Not started
+**Status:** Implemented
 
-**Scope:** Credit note reduces customer receivables (DR Revenue / CR A/R) with appropriate accounting entries; likely mirrors invoice lifecycle (draft → posted through `PostJournalEntry`, §0.7 boundary) and reduces invoice outstanding.
+**Scope:** Credit note references a posted invoice (BR-014) and offsets customer receivables through the ledger boundary (`PostJournalEntry`, §0.7): CR the customer's receivable account for the total, DR the linked invoice's revenue accounts (proportional to line net revenue) and tax payable accounts (proportional to line tax), with residual absorbed on the last line of each group so the entry balances exactly. Lifecycle draft → posted (maker-checker) or draft → voided; invoice balances are not mutated (AR offset belongs to §7.26). Over-credit prevented via `total <= invoice.balance_due - SUM(non-voided credit notes)` on create and `<= balance_due - SUM(posted)` under `FOR UPDATE` on post. Currency derived server-side from the invoice; per-org sequential numbering `CN-000001`; idempotency-key support; audit events `customer-credit-note.{created,posted,voided}`.
+
+**Files:** `CustomerCreditNoteStatus`, `CustomerCreditNote`, `CustomerCreditNoteFactory`, `CreateCustomerCreditNote`, `PostCustomerCreditNote`, `VoidCustomerCreditNote`, `CustomerCreditNotePolicy`, `StoreCustomerCreditNoteRequest`, `VoidCustomerCreditNoteRequest`, `CustomerCreditNoteController`, `CreditNotes/Index.jsx`, `CreditNotes/CustomerCreditNoteForm.jsx`, permissions `view/create/approve/void-credit-notes`.
+
+**Tests:** `tests/Feature/CustomerCreditNoteTest.php` — 24 tests / 73 assertions.
 
 **Next:** AR Aging (§7.26).
 

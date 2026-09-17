@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerCreditNoteController;
 use App\Http\Controllers\CustomerInvoiceController;
 use App\Http\Controllers\CustomerPaymentController;
 use App\Http\Controllers\DashboardController;
@@ -57,6 +58,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/payments', [CustomerPaymentController::class, 'store'])->name('payments.store')->middleware('password.confirm');
     Route::post('/payments/{customerPayment}/allocate', [CustomerPaymentController::class, 'allocate'])->name('payments.allocate');
     Route::post('/payments/{customerPayment}/post', [CustomerPaymentController::class, 'post'])->name('payments.post');
+
+    Route::get('/credit-notes', [CustomerCreditNoteController::class, 'index'])->name('credit-notes.index');
+    Route::post('/credit-notes', [CustomerCreditNoteController::class, 'store'])->name('credit-notes.store')->middleware('password.confirm');
+    Route::post('/credit-notes/{customerCreditNote}/post', [CustomerCreditNoteController::class, 'post'])->name('credit-notes.post');
+    Route::post('/credit-notes/{customerCreditNote}/void', [CustomerCreditNoteController::class, 'void'])->name('credit-notes.void');
 
     Route::get('/period-closing', [PeriodClosingController::class, 'index'])->name('period-closing.index');
     Route::post('/accounting-periods/{accountingPeriod}/close', [PeriodClosingController::class, 'close'])->name('accounting-periods.close')->middleware('password.confirm');
