@@ -91,6 +91,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports/income-statement', [ReportController::class, 'incomeStatement'])->name('reports.income-statement');
     Route::get('/reports/balance-sheet', [ReportController::class, 'balanceSheet'])->name('reports.balance-sheet');
     Route::get('/reports/cash-flow', [ReportController::class, 'cashFlow'])->name('reports.cash-flow');
+    Route::get('/reports/ar-aging', [ReportController::class, 'arAging'])->name('reports.ar-aging');
     Route::get('/reports/exports', [ReportController::class, 'exports'])->name('reports.exports');
     Route::post('/reports/export', [ReportController::class, 'store'])->name('reports.export')->middleware('password.confirm');
     Route::get('/reports/exports/{reportExport}', [ReportController::class, 'download'])->name('reports.download')->middleware('password.confirm');

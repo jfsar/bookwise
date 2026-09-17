@@ -14,16 +14,6 @@ const exportStatusTones = {
     failed: 'error',
 };
 
-const filterFields = [
-    ['account_id', 'Account'],
-    ['journal_id', 'Journal'],
-    ['fiscal_year_id', 'Fiscal Year'],
-    ['accounting_period_id', 'Accounting Period'],
-    ['start_date', 'Start Date'],
-    ['end_date', 'End Date'],
-    ['reference', 'Reference'],
-];
-
 const POLL_INTERVAL_MS = 10000;
 
 export default function ReportShell({
@@ -40,9 +30,24 @@ export default function ReportShell({
     exporting = false,
     hasRecords = false,
     onExport,
+    showStandardFilters = true,
+    showAsOf = false,
     children,
 }) {
     const { errors = {} } = usePage().props;
+
+    const filterFields = [
+        ...(showStandardFilters ? [
+            ['account_id', 'Account'],
+            ['journal_id', 'Journal'],
+            ['fiscal_year_id', 'Fiscal Year'],
+            ['accounting_period_id', 'Accounting Period'],
+            ['start_date', 'Start Date'],
+            ['end_date', 'End Date'],
+            ['reference', 'Reference'],
+        ] : []),
+        ...(showAsOf ? [['as_of', 'As Of']] : []),
+    ];
 
     const [liveExports, setLiveExports] = useState(null);
 
@@ -133,8 +138,21 @@ export default function ReportShell({
                     )}
 
                     <div className="grid gap-4 lg:grid-cols-4">
-                        <div>
-                            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account</label>
+                        {showAsOf && (
+                            <div>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">As Of</label>
+                                <Input
+                                    type="date"
+                                    value={filters.as_of ?? ''}
+                                    onChange={(event) => setFilters({ ...filters, as_of: event.target.value || '' })}
+                                />
+                            </div>
+                        )}
+
+                        {showStandardFilters && (
+                            <>
+                                <div>
+                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account</label>
                             <NativeSelect
                                 value={filters.account_id ?? ''}
                                 onChange={(event) => setFilters({ ...filters, account_id: event.target.value || '' })}
@@ -224,6 +242,8 @@ export default function ReportShell({
                                 onChange={(event) => setFilters({ ...filters, reference: event.target.value || '' })}
                             />
                         </div>
+                            </>
+                        )}
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-3">

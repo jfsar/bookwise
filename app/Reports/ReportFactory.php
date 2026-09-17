@@ -18,6 +18,7 @@ class ReportFactory
             ReportType::IncomeStatement => new IncomeStatementReport($organization, $filters),
             ReportType::BalanceSheet => new BalanceSheetReport($organization, $filters),
             ReportType::CashFlow => new CashFlowReport($organization, $filters),
+            ReportType::ArAging => new ArAgingReport($organization, $filters),
         };
     }
 }
