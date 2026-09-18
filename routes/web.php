@@ -16,7 +16,9 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VendorBillController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\VendorPaymentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -53,6 +55,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/vendors', [VendorController::class, 'index'])->name('vendors.index');
     Route::post('/vendors', [VendorController::class, 'store'])->name('vendors.store')->middleware('password.confirm');
     Route::put('/vendors/{vendor}', [VendorController::class, 'update'])->name('vendors.update')->middleware('password.confirm');
+
+    Route::get('/bills', [VendorBillController::class, 'index'])->name('bills.index');
+    Route::post('/bills', [VendorBillController::class, 'store'])->name('bills.store')->middleware('password.confirm');
+    Route::post('/bills/{vendorBill}/post', [VendorBillController::class, 'post'])->name('bills.post');
+    Route::post('/bills/{vendorBill}/void', [VendorBillController::class, 'void'])->name('bills.void');
+
+    Route::get('/vendor-payments', [VendorPaymentController::class, 'index'])->name('vendor-payments.index');
+    Route::post('/vendor-payments', [VendorPaymentController::class, 'store'])->name('vendor-payments.store')->middleware('password.confirm');
+    Route::post('/vendor-payments/{vendorPayment}/post', [VendorPaymentController::class, 'post'])->name('vendor-payments.post');
+    Route::post('/vendor-payments/{vendorPayment}/void', [VendorPaymentController::class, 'void'])->name('vendor-payments.void');
 
     Route::get('/invoices', [CustomerInvoiceController::class, 'index'])->name('invoices.index');
     Route::post('/invoices', [CustomerInvoiceController::class, 'store'])->name('invoices.store')->middleware('password.confirm');

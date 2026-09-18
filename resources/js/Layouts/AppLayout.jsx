@@ -56,6 +56,8 @@ const navigation = [
             { label: 'Payments', href: '/payments', icon: Banknote },
             { label: 'Credit Notes', href: '/credit-notes', icon: TicketPercent },
             { label: 'Vendors', href: '/vendors', icon: Contact },
+            { label: 'Bills', href: '/bills', icon: FileText },
+            { label: 'Vendor Payments', href: '/vendor-payments', icon: Banknote },
         ],
     },
     {

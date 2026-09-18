@@ -54,6 +54,14 @@ class PermissionSeeder extends Seeder
             ['name' => 'create-vendors', 'description' => 'Create new vendors.'],
             ['name' => 'update-vendors', 'description' => 'Update existing vendors.'],
             ['name' => 'archive-vendors', 'description' => 'Archive/deactivate vendors.'],
+            ['name' => 'view-bills', 'description' => 'View vendor bills.'],
+            ['name' => 'create-bills', 'description' => 'Create vendor bills.'],
+            ['name' => 'approve-bills', 'description' => 'Approve and post vendor bills.'],
+            ['name' => 'void-bills', 'description' => 'Void draft, posted or partially paid vendor bills.'],
+            ['name' => 'view-vendor-payments', 'description' => 'View vendor payments.'],
+            ['name' => 'create-vendor-payments', 'description' => 'Create vendor payments.'],
+            ['name' => 'approve-vendor-payments', 'description' => 'Post vendor payments to the ledger.'],
+            ['name' => 'void-vendor-payments', 'description' => 'Void draft or posted vendor payments.'],
         ];
 
         foreach ($permissions as $permission) {
@@ -107,6 +115,10 @@ class PermissionSeeder extends Seeder
                 'view-vendors',
                 'create-vendors',
                 'update-vendors',
+                'view-bills',
+                'create-bills',
+                'view-vendor-payments',
+                'create-vendor-payments',
             ])->get());
         }
 
@@ -125,6 +137,8 @@ class PermissionSeeder extends Seeder
                 'view-payments',
                 'view-credit-notes',
                 'view-vendors',
+                'view-bills',
+                'view-vendor-payments',
             ])->get());
         }
 
