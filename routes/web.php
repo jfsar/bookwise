@@ -16,6 +16,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VendorController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -48,6 +49,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store')->middleware('password.confirm');
     Route::put('/customers/{customer}', [CustomerController::class, 'update'])->name('customers.update')->middleware('password.confirm');
+
+    Route::get('/vendors', [VendorController::class, 'index'])->name('vendors.index');
+    Route::post('/vendors', [VendorController::class, 'store'])->name('vendors.store')->middleware('password.confirm');
+    Route::put('/vendors/{vendor}', [VendorController::class, 'update'])->name('vendors.update')->middleware('password.confirm');
 
     Route::get('/invoices', [CustomerInvoiceController::class, 'index'])->name('invoices.index');
     Route::post('/invoices', [CustomerInvoiceController::class, 'store'])->name('invoices.store')->middleware('password.confirm');
