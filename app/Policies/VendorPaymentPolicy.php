@@ -23,6 +23,11 @@ class VendorPaymentPolicy
         return $user->hasPermissionTo('create-vendor-payments', $organization);
     }
 
+    public function allocate(User $user, VendorPayment $payment): bool
+    {
+        return $user->hasPermissionTo('allocate-vendor-payments', $payment->organization);
+    }
+
     public function post(User $user, VendorPayment $payment): bool
     {
         return $user->hasPermissionTo('approve-vendor-payments', $payment->organization);

@@ -54,6 +54,11 @@ class ReportController extends Controller
         return $this->show(ReportType::ArAging, $request);
     }
 
+    public function apAging(ReportRequest $request): Response
+    {
+        return $this->show(ReportType::ApAging, $request);
+    }
+
     public function exports(Request $request): JsonResponse
     {
         $this->authorize('viewReports', ReportExport::class);
@@ -178,6 +183,7 @@ class ReportController extends Controller
             ReportType::BalanceSheet => 'Reports/BalanceSheet',
             ReportType::CashFlow => 'Reports/CashFlow',
             ReportType::ArAging => 'Reports/ArAging',
+            ReportType::ApAging => 'Reports/ApAging',
         };
     }
 

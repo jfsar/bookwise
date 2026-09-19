@@ -19,6 +19,7 @@ class ReportFactory
             ReportType::BalanceSheet => new BalanceSheetReport($organization, $filters),
             ReportType::CashFlow => new CashFlowReport($organization, $filters),
             ReportType::ArAging => new ArAgingReport($organization, $filters),
+            ReportType::ApAging => new ApAgingReport($organization, $filters),
         };
     }
 }

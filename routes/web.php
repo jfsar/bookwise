@@ -18,6 +18,7 @@ use App\Http\Controllers\SessionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VendorBillController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\VendorDebitNoteController;
 use App\Http\Controllers\VendorPaymentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -64,7 +65,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/vendor-payments', [VendorPaymentController::class, 'index'])->name('vendor-payments.index');
     Route::post('/vendor-payments', [VendorPaymentController::class, 'store'])->name('vendor-payments.store')->middleware('password.confirm');
     Route::post('/vendor-payments/{vendorPayment}/post', [VendorPaymentController::class, 'post'])->name('vendor-payments.post');
+    Route::post('/vendor-payments/{vendorPayment}/allocate', [VendorPaymentController::class, 'allocate'])->name('vendor-payments.allocate');
     Route::post('/vendor-payments/{vendorPayment}/void', [VendorPaymentController::class, 'void'])->name('vendor-payments.void');
+
+    Route::get('/vendor-debit-notes', [VendorDebitNoteController::class, 'index'])->name('vendor-debit-notes.index');
+    Route::post('/vendor-debit-notes', [VendorDebitNoteController::class, 'store'])->name('vendor-debit-notes.store')->middleware('password.confirm');
+    Route::post('/vendor-debit-notes/{vendorDebitNote}/post', [VendorDebitNoteController::class, 'post'])->name('vendor-debit-notes.post');
+    Route::post('/vendor-debit-notes/{vendorDebitNote}/void', [VendorDebitNoteController::class, 'void'])->name('vendor-debit-notes.void');
 
     Route::get('/invoices', [CustomerInvoiceController::class, 'index'])->name('invoices.index');
     Route::post('/invoices', [CustomerInvoiceController::class, 'store'])->name('invoices.store')->middleware('password.confirm');
@@ -110,6 +117,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports/balance-sheet', [ReportController::class, 'balanceSheet'])->name('reports.balance-sheet');
     Route::get('/reports/cash-flow', [ReportController::class, 'cashFlow'])->name('reports.cash-flow');
     Route::get('/reports/ar-aging', [ReportController::class, 'arAging'])->name('reports.ar-aging');
+    Route::get('/reports/ap-aging', [ReportController::class, 'apAging'])->name('reports.ap-aging');
     Route::get('/reports/exports', [ReportController::class, 'exports'])->name('reports.exports');
     Route::post('/reports/export', [ReportController::class, 'store'])->name('reports.export')->middleware('password.confirm');
     Route::get('/reports/exports/{reportExport}', [ReportController::class, 'download'])->name('reports.download')->middleware('password.confirm');

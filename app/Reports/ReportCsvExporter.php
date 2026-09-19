@@ -21,6 +21,7 @@ class ReportCsvExporter
             ReportType::BalanceSheet => $this->balanceSheet($data),
             ReportType::CashFlow => $this->cashFlow($data),
             ReportType::ArAging => $this->arAging($data),
+            ReportType::ApAging => $this->apAging($data),
         };
     }
 
@@ -153,6 +154,33 @@ class ReportCsvExporter
             $rows[] = [
                 $row['customer']['number'],
                 $row['customer']['name'],
+                $row['current'],
+                $row['days_1_30'],
+                $row['days_31_60'],
+                $row['days_61_90'],
+                $row['days_90_plus'],
+                $row['total'],
+            ];
+        }
+
+        $total = $data['totals'];
+        $rows[] = [null, 'Totals', $total['current'], $total['days_1_30'], $total['days_31_60'], $total['days_61_90'], $total['days_90_plus'], $total['total']];
+
+        return ['headers' => $headers, 'rows' => $rows];
+    }
+
+    /**
+     * @return array{headers: array<int, string>, rows: array<int, array<int, int|float|string|null>>}
+     */
+    protected function apAging(array $data): array
+    {
+        $headers = ['Vendor #', 'Vendor Name', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days', 'Total'];
+        $rows = [];
+
+        foreach ($data['rows'] as $row) {
+            $rows[] = [
+                $row['vendor']['number'],
+                $row['vendor']['name'],
                 $row['current'],
                 $row['days_1_30'],
                 $row['days_31_60'],

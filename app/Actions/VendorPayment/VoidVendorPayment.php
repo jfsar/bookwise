@@ -8,6 +8,7 @@ use App\Enums\VendorPaymentStatus;
 use App\Models\User;
 use App\Models\VendorPayment;
 use App\Services\AuditLogService;
+use App\Services\VendorBillSettlement;
 use Illuminate\Support\Facades\DB;
 
 class VoidVendorPayment
@@ -42,6 +43,10 @@ class VoidVendorPayment
                 'voided_by' => $voider->id,
                 'void_reason' => $reason,
             ]);
+
+            if ($wasPosted) {
+                app(VendorBillSettlement::class)->reconcileForPayment($payment, $voider);
+            }
 
             app(AuditLogService::class)->record(
                 $payment->organization,

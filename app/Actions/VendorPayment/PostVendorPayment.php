@@ -13,6 +13,7 @@ use App\Models\JournalEntryLine;
 use App\Models\User;
 use App\Models\VendorPayment;
 use App\Services\AuditLogService;
+use App\Services\VendorBillSettlement;
 use Illuminate\Support\Facades\DB;
 
 class PostVendorPayment
@@ -78,6 +79,8 @@ class PostVendorPayment
                 'posted_at' => now(),
             ]);
 
+            $this->settleBills($payment, $poster);
+
             app(AuditLogService::class)->record(
                 $organization,
                 $poster->id,
@@ -90,6 +93,15 @@ class PostVendorPayment
 
             return $payment->fresh()->load(['journalEntry']);
         });
+    }
+
+    /**
+     * When a payment posts, settle every bill it is allocated against: paid
+     * amount and balance are derived from posted allocations (SRS 7.29/7.30).
+     */
+    protected function settleBills(VendorPayment $payment, User $poster): void
+    {
+        app(VendorBillSettlement::class)->reconcileForPayment($payment, $poster);
     }
 
     /**

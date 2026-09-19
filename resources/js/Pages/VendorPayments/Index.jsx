@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 
 import VendorPaymentForm from '@/Pages/VendorPayments/VendorPaymentForm';
+import VendorPaymentAllocationDialog from '@/Pages/VendorPayments/AllocationDialog';
 import AppLayout from '@/Layouts/AppLayout';
 import Pagination from '@/Components/Pagination';
 import StatusBadge from '@/Components/StatusBadge';
@@ -16,6 +17,7 @@ export default function VendorPaymentsIndex() {
     const [status, setStatus] = useState('');
 
     const [showModal, setShowModal] = useState(false);
+    const [allocatingPayment, setAllocatingPayment] = useState(null);
 
     useEffect(() => {
         if (!status) {
@@ -66,6 +68,7 @@ export default function VendorPaymentsIndex() {
                                 <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Payment Date</TableHead>
                                 <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Method</TableHead>
                                 <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">Amount</TableHead>
+                                <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">Allocated</TableHead>
                                 <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Status</TableHead>
                                 <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">Actions</TableHead>
                             </TableRow>
@@ -78,6 +81,11 @@ export default function VendorPaymentsIndex() {
                                     <TableCell className="text-sm text-muted-foreground">{payment.payment_date}</TableCell>
                                     <TableCell className="text-sm text-muted-foreground">{payment.payment_method?.replace('_', ' ')}</TableCell>
                                     <TableCell className="text-right text-sm font-display font-medium text-on-surface">{Number(payment.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                    <TableCell className="text-right text-sm text-muted-foreground">
+                                        {payment.status === 'draft' && Number(payment.allocated) > 0
+                                            ? Number(payment.allocated).toLocaleString(undefined, { minimumFractionDigits: 2 })
+                                            : '—'}
+                                    </TableCell>
                                     <TableCell>
                                         <StatusBadge tone={payment.status === 'draft' ? 'default' : payment.status === 'posted' ? 'success' : payment.status === 'voided' ? 'error' : 'warning'}>
                                             {payment.status.replace('_', ' ')}
@@ -85,6 +93,11 @@ export default function VendorPaymentsIndex() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
+                                            {payment.can?.allocate && (
+                                                <Button size="sm" variant="outline" onClick={() => setAllocatingPayment(payment)}>
+                                                    Allocate
+                                                </Button>
+                                            )}
                                             {payment.can?.post && (
                                                 <Button size="sm" variant="secondary" onClick={() => router.post(`/vendor-payments/${payment.id}/post`)}>
                                                     Post
@@ -113,6 +126,12 @@ export default function VendorPaymentsIndex() {
                 accounts={accounts ?? []}
                 currencies={currencies ?? []}
                 baseCurrencyId={baseCurrencyId}
+            />
+
+            <VendorPaymentAllocationDialog
+                payment={allocatingPayment}
+                open={Boolean(allocatingPayment)}
+                onClose={() => setAllocatingPayment(null)}
             />
         </>
     );

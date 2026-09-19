@@ -58,6 +58,7 @@ const navigation = [
             { label: 'Vendors', href: '/vendors', icon: Contact },
             { label: 'Bills', href: '/bills', icon: FileText },
             { label: 'Vendor Payments', href: '/vendor-payments', icon: Banknote },
+            { label: 'Vendor Debit Notes', href: '/vendor-debit-notes', icon: TicketPercent },
         ],
     },
     {
@@ -69,6 +70,7 @@ const navigation = [
             { label: 'Balance Sheet', href: '/reports/balance-sheet', icon: Wallet },
             { label: 'Cash Flow', href: '/reports/cash-flow', icon: BanknoteArrowDown },
             { label: 'AR Aging', href: '/reports/ar-aging', icon: CalendarClock },
+            { label: 'AP Aging', href: '/reports/ap-aging', icon: CalendarClock },
             { label: 'Fiscal Years', href: '/fiscal-years', icon: CalendarRange },
             { label: 'Period Closing', href: '/period-closing', icon: Lock },
         ],

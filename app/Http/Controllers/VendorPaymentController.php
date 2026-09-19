@@ -3,16 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Organization\SwitchOrganization;
+use App\Actions\VendorPayment\AllocateVendorPayment;
 use App\Actions\VendorPayment\CreateVendorPayment;
 use App\Actions\VendorPayment\PostVendorPayment;
 use App\Actions\VendorPayment\VoidVendorPayment;
+use App\Enums\VendorBillStatus;
+use App\Enums\VendorPaymentStatus;
+use App\Http\Requests\AllocateVendorPaymentRequest;
 use App\Http\Requests\StoreVendorPaymentRequest;
 use App\Http\Requests\VoidVendorPaymentRequest;
 use App\Models\Account;
 use App\Models\Currency;
+use App\Models\Organization;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Models\VendorBill;
 use App\Models\VendorPayment;
+use App\Models\VendorPaymentAllocation;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -150,6 +157,33 @@ class VendorPaymentController extends Controller
         }
     }
 
+    public function allocate(AllocateVendorPaymentRequest $request, VendorPayment $vendorPayment): RedirectResponse
+    {
+        $organization = SwitchOrganization::current($request->user());
+
+        if (! $organization) {
+            return back()->with('error', 'No organization selected.');
+        }
+
+        if ($vendorPayment->organization_id !== $organization->id) {
+            abort(404);
+        }
+
+        $this->authorize('allocate', $vendorPayment);
+
+        try {
+            (new AllocateVendorPayment)->handle($vendorPayment, $request->validated('allocations'), $request->user());
+
+            return back()->with('success', 'Payment allocation saved.');
+        } catch (QueryException $e) {
+            logger()->error('Failed to allocate vendor payment.', ['payment_id' => $vendorPayment->id, 'exception' => $e]);
+
+            return back()->with('error', 'Unable to allocate the payment. Please try again.');
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     public function void(VoidVendorPaymentRequest $request, VendorPayment $vendorPayment): RedirectResponse
     {
         $organization = SwitchOrganization::current($request->user());
@@ -182,6 +216,8 @@ class VendorPaymentController extends Controller
      */
     private function serialize(VendorPayment $payment, User $user): array
     {
+        $organization = $payment->organization;
+
         return [
             'id' => $payment->id,
             'ulid' => $payment->ulid,
@@ -208,8 +244,60 @@ class VendorPaymentController extends Controller
             'created_at' => $payment->created_at?->format('M d, Y'),
             'can' => [
                 'post' => $user->can('post', $payment),
+                'allocate' => $payment->isDraft() && $user->can('allocate', $payment),
                 'void' => ($payment->isDraft() || $payment->isPosted()) && $user->can('void', $payment),
             ],
+            'allocable_bills' => $payment->isDraft() ? $this->allocableBills($payment, $organization) : [],
         ];
+    }
+
+    /**
+     * Posted bills of the same vendor that still have an outstanding balance,
+     * each capped by what this draft payment can still cover. Existing draft
+     * allocations are already reflected so the UI never offers more than the
+     * supported limits (SRS 7.29/7.31).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function allocableBills(VendorPayment $payment, Organization $organization): array
+    {
+        $bills = VendorBill::forOrganization($organization)
+            ->where('vendor_id', $payment->vendor_id)
+            ->whereIn('status', [VendorBillStatus::Posted, VendorBillStatus::PartiallyPaid])
+            ->orderBy('due_date')
+            ->get();
+
+        if ($bills->isEmpty()) {
+            return [];
+        }
+
+        $pendingByBill = VendorPaymentAllocation::query()
+            ->join('vendor_payments', 'vendor_payments.id', '=', 'vendor_payment_allocations.payment_id')
+            ->where('vendor_payment_allocations.organization_id', $organization->id)
+            ->whereIn('vendor_payment_allocations.bill_id', $bills->pluck('id'))
+            ->where('vendor_payments.status', VendorPaymentStatus::Draft)
+            ->groupBy('vendor_payment_allocations.bill_id')
+            ->selectRaw('vendor_payment_allocations.bill_id, SUM(vendor_payment_allocations.amount) as total')
+            ->pluck('total', 'bill_id');
+
+        return $bills
+            ->map(function (VendorBill $bill) use ($payment, $pendingByBill) {
+                $pending = (float) ($pendingByBill[$bill->id] ?? 0);
+                $available = round((float) $bill->balance_due - $pending, 4);
+                $remaining = round((float) $payment->amount - $payment->totalAllocated(), 4);
+
+                return [
+                    'id' => $bill->id,
+                    'bill_number' => $bill->bill_number,
+                    'due_date' => $bill->due_date?->format('M d, Y'),
+                    'total_amount' => (float) $bill->total_amount,
+                    'balance_due' => (float) $bill->balance_due,
+                    'available' => max(0.0, min($available, $remaining)),
+                    'status' => $bill->status->value,
+                ];
+            })
+            ->filter(fn (array $bill) => $bill['available'] > 0.005)
+            ->values()
+            ->all();
     }
 }
