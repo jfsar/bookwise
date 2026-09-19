@@ -28,5 +28,3 @@ Implemented (migrations applied on `pgsql_direct`; suites passing):
 - **AP Aging** (§67; buckets from §7.26 applied to payables): `ApAgingReportTest` (10 tests, 70 assertions). Files: `app/Reports/ApAgingReport.php`, `app/Enums/ReportType.php` (`ApAging` case), `app/Reports/ReportFactory.php`, `app/Reports/ReportCsvExporter.php`, `app/Http/Controllers/ReportController.php`, `routes/web.php` (`reports.ap-aging`), `resources/js/Pages/Reports/ApAging.jsx`, `resources/js/Layouts/AppLayout.jsx`.
 
 **Next:** Phase 6 — Banking (Bank Accounts §7.32, Bank Transactions §7.33, Reconciliation §7.34).
-
-Note: Payment Allocation changes (Phase 5) are still uncommitted in the working tree.
