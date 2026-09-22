@@ -34,4 +34,22 @@ class StoreVendorBillRequest extends FormRequest
             'lines.*.tax_code_id' => ['nullable', 'exists:tax_codes,id'],
         ];
     }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            foreach ((array) $this->input('lines') as $index => $line) {
+                $quantity = (float) ($line['quantity'] ?? 0);
+                $unitPrice = (float) ($line['unit_price'] ?? 0);
+                $discount = (float) ($line['discount_amount'] ?? 0);
+
+                if ($discount > round($quantity * $unitPrice, 4)) {
+                    $validator->errors()->add(
+                        "lines.{$index}.discount_amount",
+                        'The line discount cannot exceed its extended amount (quantity x unit price).'
+                    );
+                }
+            }
+        });
+    }
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\AccountingPeriodStatus;
 use App\Enums\FiscalYearStatus;
 use App\Enums\VendorBillStatus;
+use App\Enums\VendorDebitNoteStatus;
 use App\Enums\VendorPaymentStatus;
 use App\Models\Account;
 use App\Models\AccountingPeriod;
@@ -17,6 +18,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Models\VendorBill;
+use App\Models\VendorDebitNote;
 use App\Models\VendorPayment;
 use App\Models\VendorPaymentAllocation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -388,6 +390,72 @@ class VendorPaymentAllocationTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('VendorPayments/Index')
                 ->where('payments.data.0.can.allocate', true)
+                ->where('payments.data.0.allocable_bills.0.id', $bill->id)
+                ->where('payments.data.0.allocable_bills.0.available', 60));
+    }
+
+    public function test_allocate_rejects_beyond_available_after_posted_debit_note(): void
+    {
+        [$org, , , $vendor, $currencyId] = $this->allocationSetup();
+        $creator = User::factory()->create();
+        $allocator = User::factory()->create();
+        $this->attachRoleWithPermission($allocator, $org, 'allocate-vendor-payments');
+
+        $payment = $this->draftPayment($creator, $org, $vendor, $currencyId, 100);
+        $bill = $this->postedBill($creator, $org, $vendor, 100);
+
+        VendorDebitNote::factory()->posted()->create([
+            'organization_id' => $org->id,
+            'vendor_id' => $vendor->id,
+            'bill_id' => $bill->id,
+            'currency_id' => $currencyId,
+            'exchange_rate' => 1,
+            'subtotal' => 40,
+            'tax_amount' => 0,
+            'total_amount' => 40,
+            'status' => VendorDebitNoteStatus::Posted,
+            'created_by' => $creator->id,
+        ]);
+
+        $this->actingAs($allocator)
+            ->post("/vendor-payments/{$payment->id}/allocate", $this->payload($bill, 80))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Bill '.$bill->bill_number.' cannot be allocated beyond its outstanding balance.');
+
+        $this->actingAs($allocator)
+            ->post("/vendor-payments/{$payment->id}/allocate", $this->payload($bill, 60))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Payment allocation saved.');
+    }
+
+    public function test_index_allocable_bills_nets_posted_debit_notes(): void
+    {
+        [$org, , , $vendor, $currencyId] = $this->allocationSetup();
+        $creator = User::factory()->create();
+        $allocator = User::factory()->create();
+        $this->attachRoleWithPermission($allocator, $org, ['view-vendor-payments', 'allocate-vendor-payments']);
+
+        $payment = $this->draftPayment($creator, $org, $vendor, $currencyId, 100);
+        $bill = $this->postedBill($creator, $org, $vendor, 100);
+
+        VendorDebitNote::factory()->posted()->create([
+            'organization_id' => $org->id,
+            'vendor_id' => $vendor->id,
+            'bill_id' => $bill->id,
+            'currency_id' => $currencyId,
+            'exchange_rate' => 1,
+            'subtotal' => 40,
+            'tax_amount' => 0,
+            'total_amount' => 40,
+            'status' => VendorDebitNoteStatus::Posted,
+            'created_by' => $creator->id,
+        ]);
+
+        $this->actingAs($allocator)
+            ->get('/vendor-payments')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('VendorPayments/Index')
                 ->where('payments.data.0.allocable_bills.0.id', $bill->id)
                 ->where('payments.data.0.allocable_bills.0.available', 60));
     }

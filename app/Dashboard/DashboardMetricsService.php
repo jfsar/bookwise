@@ -4,6 +4,7 @@ namespace App\Dashboard;
 
 use App\Enums\FiscalYearStatus;
 use App\Enums\JournalEntryStatus;
+use App\Enums\VendorDebitNoteStatus;
 use App\Models\JournalEntry;
 use App\Models\Organization;
 use Illuminate\Database\Query\Builder;
@@ -103,17 +104,25 @@ class DashboardMetricsService
             ->where('organization_id', $organization->id)
             ->whereNull('voided_at')
             ->whereIn('status', ['posted', 'partially_paid'])
-            ->selectRaw('COALESCE(SUM(CASE WHEN balance_due > 0 THEN balance_due ELSE 0 END), 0) as total')
+            ->selectRaw('COALESCE(SUM(CASE WHEN balance_due > 0 THEN balance_due * exchange_rate ELSE 0 END), 0) as total')
             ->selectRaw('COUNT(*) FILTER (WHERE balance_due > 0) as open')
             ->selectRaw('COUNT(*) FILTER (WHERE balance_due > 0 AND due_date < ?) as overdue', [$today])
             ->first();
 
-        $bills = DB::table('vendor_bills')
+        $debitNotes = DB::table('vendor_debit_notes')
             ->where('organization_id', $organization->id)
-            ->whereNull('voided_at')
-            ->selectRaw('COALESCE(SUM(CASE WHEN balance_due > 0 THEN balance_due ELSE 0 END), 0) as total')
-            ->selectRaw('COUNT(*) FILTER (WHERE balance_due > 0) as open')
-            ->selectRaw('COUNT(*) FILTER (WHERE balance_due > 0 AND due_date < ?) as overdue', [$today])
+            ->where('status', VendorDebitNoteStatus::Posted->value)
+            ->selectRaw('bill_id, SUM(total_amount) AS debited')
+            ->groupBy('bill_id');
+
+        $bills = DB::table('vendor_bills')
+            ->leftJoinSub($debitNotes, 'debit_notes', 'debit_notes.bill_id', '=', 'vendor_bills.id')
+            ->where('vendor_bills.organization_id', $organization->id)
+            ->whereNull('vendor_bills.voided_at')
+            ->whereIn('vendor_bills.status', ['posted', 'partially_paid'])
+            ->selectRaw('COALESCE(SUM(CASE WHEN (vendor_bills.balance_due - COALESCE(debit_notes.debited, 0)) > 0 THEN (vendor_bills.balance_due - COALESCE(debit_notes.debited, 0)) * vendor_bills.exchange_rate ELSE 0 END), 0) as total')
+            ->selectRaw('COUNT(*) FILTER (WHERE (vendor_bills.balance_due - COALESCE(debit_notes.debited, 0)) > 0) as open')
+            ->selectRaw('COUNT(*) FILTER (WHERE (vendor_bills.balance_due - COALESCE(debit_notes.debited, 0)) > 0 AND vendor_bills.due_date < ?) as overdue', [$today])
             ->first();
 
         return [

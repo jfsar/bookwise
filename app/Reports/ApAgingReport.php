@@ -3,7 +3,9 @@
 namespace App\Reports;
 
 use App\Enums\VendorBillStatus;
+use App\Enums\VendorDebitNoteStatus;
 use App\Models\VendorBill;
+use App\Models\VendorDebitNote;
 use Carbon\Carbon;
 
 /**
@@ -36,6 +38,14 @@ final class ApAgingReport extends ReportQuery
             return $this->emptyResult($asOf);
         }
 
+        $debitedByBill = VendorDebitNote::query()
+            ->where('organization_id', $this->organization->id)
+            ->whereIn('bill_id', $bills->pluck('id'))
+            ->where('status', VendorDebitNoteStatus::Posted)
+            ->groupBy('bill_id')
+            ->selectRaw('bill_id, SUM(total_amount) as total')
+            ->pluck('total', 'bill_id');
+
         $rows = [];
         $totals = $this->zeroTotals();
 
@@ -44,14 +54,25 @@ final class ApAgingReport extends ReportQuery
             $bucket = $this->zeroTotals();
 
             foreach ($vendorBills as $bill) {
+                $netDue = round((float) $bill->balance_due - (float) ($debitedByBill[$bill->id] ?? 0), 4);
+
+                if ($netDue <= 0.0001) {
+                    continue;
+                }
+
                 $index = $this->bucketFor($bill->due_date, $asOf);
-                $amount = $this->baseBalance($bill);
+                $amount = $this->baseBalance($bill, $netDue);
 
                 $bucket[$index] += $amount;
                 $totals[$index] += $amount;
             }
 
             $bucket['total'] = $this->round($bucket['current'] + $bucket['days_1_30'] + $bucket['days_31_60'] + $bucket['days_61_90'] + $bucket['days_90_plus']);
+
+            if ($bucket['total'] <= 0.0001) {
+                continue;
+            }
+
             $bucket = array_map(fn (float $value): float => $this->round($value), $bucket);
 
             $rows[] = [
@@ -82,9 +103,9 @@ final class ApAgingReport extends ReportQuery
     /**
      * Outstanding balance converted to the organization's base currency.
      */
-    protected function baseBalance(VendorBill $bill): float
+    protected function baseBalance(VendorBill $bill, float $balanceDue): float
     {
-        return (float) $bill->balance_due * (float) $bill->exchange_rate;
+        return $balanceDue * (float) $bill->exchange_rate;
     }
 
     /**

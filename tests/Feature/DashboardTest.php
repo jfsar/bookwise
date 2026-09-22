@@ -8,6 +8,7 @@ use App\Dashboard\DashboardMetricsService;
 use App\Models\Account;
 use App\Models\AccountingPeriod;
 use App\Models\AccountType;
+use App\Models\Currency;
 use App\Models\FiscalYear;
 use App\Models\Journal;
 use App\Models\Organization;
@@ -21,6 +22,8 @@ use Tests\TestCase;
 class DashboardTest extends TestCase
 {
     use RefreshDatabase;
+
+    private int $billSequence = 0;
 
     /**
      * @return array{org: Organization, user: User}
@@ -110,7 +113,7 @@ class DashboardTest extends TestCase
         $this->seedInvoice($org, $user, 400, now()->subDay(), $receivableAccount->id);
         $this->seedBill($org, $user, 300, now()->addDays(5), $payableAccount->id);
 
-        return ['org' => $org, 'user' => $user];
+        return ['org' => $org, 'user' => $user, 'payable' => $payableAccount];
     }
 
     /**
@@ -180,12 +183,12 @@ class DashboardTest extends TestCase
         ]);
     }
 
-    private function seedBill(Organization $org, User $user, float $balanceDue, string $dueDate, int $payableAccountId): void
+    private function seedBill(Organization $org, User $user, float $balanceDue, string $dueDate, int $payableAccountId, array $overrides = []): int
     {
         $vendorId = DB::table('vendors')->insertGetId([
             'ulid' => Str::ulid(),
             'organization_id' => $org->id,
-            'vendor_number' => 'VEND-001',
+            'vendor_number' => 'VEND-'.str_pad((string) $this->billSequence++, 3, '0', STR_PAD_LEFT),
             'name' => 'Globex Suppliers',
             'email' => 'globex@example.com',
             'payment_terms_days' => 30,
@@ -195,11 +198,11 @@ class DashboardTest extends TestCase
             'updated_by' => $user->id,
         ]);
 
-        DB::table('vendor_bills')->insert([
+        return DB::table('vendor_bills')->insertGetId(array_merge([
             'ulid' => Str::ulid(),
             'organization_id' => $org->id,
             'vendor_id' => $vendorId,
-            'bill_number' => 'BILL-001',
+            'bill_number' => 'BILL-'.str_pad((string) $this->billSequence, 6, '0', STR_PAD_LEFT),
             'bill_date' => now()->subDays(5)->toDateString(),
             'due_date' => $dueDate,
             'currency_id' => $org->base_currency_id,
@@ -215,7 +218,7 @@ class DashboardTest extends TestCase
             'posted_at' => now(),
             'created_by' => $user->id,
             'updated_by' => $user->id,
-        ]);
+        ], $overrides));
     }
 
     /**
@@ -308,6 +311,66 @@ class DashboardTest extends TestCase
         $this->assertSame(0.0, $metrics['cash_balance']);
         $this->assertSame(0.0, $metrics['revenue']);
         $this->assertSame(0, $metrics['outstanding_invoices']);
+    }
+
+    public function test_dashboard_excludes_draft_bills_from_payable_kpis(): void
+    {
+        $seeded = $this->seedDashboardData();
+
+        $this->seedBill($seeded['org'], $seeded['user'], 500, now()->addDays(5)->toDateString(), $seeded['payable']->id, ['status' => 'draft']);
+
+        $metrics = app(DashboardMetricsService::class)->forOrganization($seeded['org']);
+
+        $this->assertSame(300.0, $metrics['accounts_payable']);
+        $this->assertSame(1, $metrics['outstanding_bills']);
+        $this->assertSame(0, $metrics['bills_overdue']);
+    }
+
+    public function test_dashboard_nets_posted_debit_notes_from_bill_outstanding(): void
+    {
+        $seeded = $this->seedDashboardData();
+
+        $billId = $this->seedBill($seeded['org'], $seeded['user'], 300, now()->addDays(5)->toDateString(), $seeded['payable']->id);
+
+        DB::table('vendor_debit_notes')->insert([
+            'ulid' => Str::ulid(),
+            'organization_id' => $seeded['org']->id,
+            'vendor_id' => DB::table('vendor_bills')->where('id', $billId)->value('vendor_id'),
+            'bill_id' => $billId,
+            'debit_note_number' => 'DBN-0001',
+            'date' => now()->toDateString(),
+            'currency_id' => $seeded['org']->base_currency_id,
+            'exchange_rate' => 1,
+            'subtotal' => 100,
+            'tax_amount' => 0,
+            'total_amount' => 100,
+            'reason' => 'Overcharged',
+            'status' => 'posted',
+            'posted_at' => now(),
+            'created_by' => $seeded['user']->id,
+        ]);
+
+        $metrics = app(DashboardMetricsService::class)->forOrganization($seeded['org']);
+
+        $this->assertSame(500.0, $metrics['accounts_payable']);
+        $this->assertSame(2, $metrics['outstanding_bills']);
+        $this->assertSame(0, $metrics['bills_overdue']);
+    }
+
+    public function test_dashboard_converts_bill_outstanding_to_base_currency(): void
+    {
+        $seeded = $this->seedDashboardData();
+        $foreignCurrency = Currency::factory()->create();
+
+        $this->seedBill($seeded['org'], $seeded['user'], 100, now()->addDays(5)->toDateString(), $seeded['payable']->id, [
+            'currency_id' => $foreignCurrency->id,
+            'exchange_rate' => 2,
+        ]);
+
+        $metrics = app(DashboardMetricsService::class)->forOrganization($seeded['org']);
+
+        $this->assertSame(500.0, $metrics['accounts_payable']);
+        $this->assertSame(2, $metrics['outstanding_bills']);
     }
 
     public function test_dashboard_provides_available_timezones(): void

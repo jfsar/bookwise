@@ -31,6 +31,10 @@ class PostVendorBill
                 throw new \RuntimeException('Maker-checker: The final poster cannot be the same person who created the bill.');
             }
 
+            if ((float) $bill->total_amount <= 0.0001) {
+                throw new \RuntimeException('A bill with a zero total cannot be posted.');
+            }
+
             $organization = $bill->organization;
             $journal = $this->resolveJournal($organization);
             [$fiscalYear, $period] = $this->resolvePeriod($organization, $bill->bill_date, 'bill date');

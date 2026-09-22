@@ -4,9 +4,11 @@ namespace App\Actions\VendorPayment;
 
 use App\Actions\Action;
 use App\Enums\VendorBillStatus;
+use App\Enums\VendorDebitNoteStatus;
 use App\Enums\VendorPaymentStatus;
 use App\Models\User;
 use App\Models\VendorBill;
+use App\Models\VendorDebitNote;
 use App\Models\VendorPayment;
 use App\Models\VendorPaymentAllocation;
 use App\Services\AuditLogService;
@@ -61,6 +63,14 @@ class AllocateVendorPayment
                 ->selectRaw('vendor_payment_allocations.bill_id, SUM(vendor_payment_allocations.amount) as total')
                 ->pluck('total', 'bill_id');
 
+            $debitedByBill = VendorDebitNote::query()
+                ->where('organization_id', $organization->id)
+                ->whereIn('bill_id', $billIds)
+                ->where('status', VendorDebitNoteStatus::Posted)
+                ->groupBy('bill_id')
+                ->selectRaw('bill_id, SUM(total_amount) as total')
+                ->pluck('total', 'bill_id');
+
             foreach ($merged as $billId => $amount) {
                 $bill = $bills->get($billId);
 
@@ -76,7 +86,7 @@ class AllocateVendorPayment
                     throw new \RuntimeException('The payment and the bill must use the same currency.');
                 }
 
-                $available = round((float) $bill->balance_due - (float) ($pendingAllocatedByBill[$billId] ?? 0), 4);
+                $available = round((float) $bill->balance_due - (float) ($pendingAllocatedByBill[$billId] ?? 0) - (float) ($debitedByBill[$billId] ?? 0), 4);
 
                 if ($amount > $available) {
                     throw new \RuntimeException("Bill {$bill->bill_number} cannot be allocated beyond its outstanding balance.");

@@ -201,6 +201,53 @@ class VendorBillTest extends TestCase
             ->assertSessionHas('error', 'The vendor must belong to the same organization.');
     }
 
+    public function test_store_rejects_discount_exceeding_extended_amount(): void
+    {
+        $user = User::factory()->create();
+        [$org, $expense, $taxCode, $vendor, $currencyId] = $this->billOrganization();
+        $this->attachRoleWithPermission($user, $org, 'create-bills');
+
+        $payload = $this->storePayload($expense->id, $taxCode->id, $vendor->id, $currencyId);
+        $payload['lines'][0]['quantity'] = 2;
+        $payload['lines'][0]['unit_price'] = 100;
+        $payload['lines'][0]['discount_amount'] = 250;
+
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->post('/bills', $payload)
+            ->assertRedirect()
+            ->assertSessionHasErrors(['lines.0.discount_amount']);
+
+        $this->assertDatabaseCount('vendor_bills', 0);
+    }
+
+    public function test_store_accepts_discount_equal_to_extended_amount(): void
+    {
+        $user = User::factory()->create();
+        [$org, $expense, $taxCode, $vendor, $currencyId] = $this->billOrganization();
+        $this->attachRoleWithPermission($user, $org, 'create-bills');
+
+        $payload = $this->storePayload($expense->id, $taxCode->id, $vendor->id, $currencyId);
+        $payload['lines'][0]['quantity'] = 1;
+        $payload['lines'][0]['unit_price'] = 100;
+        $payload['lines'][0]['discount_amount'] = 100;
+
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->post('/bills', $payload)
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('vendor_bills', [
+            'organization_id' => $org->id,
+            'subtotal' => 100,
+            'discount_amount' => 100,
+            'total_amount' => 0,
+        ]);
+    }
+
     // ─── Posting Tests ────────────────────────────────────────────────────
 
     private function postingSetup(): array
@@ -322,6 +369,39 @@ class VendorBillTest extends TestCase
             'debit' => 0.0,
             'credit' => 100.0,
         ]);
+    }
+
+    public function test_post_rejects_zero_total_bill(): void
+    {
+        $creator = User::factory()->create();
+        $poster = User::factory()->create();
+        [$org, $expense, , $vendor, $currencyId] = $this->postingSetup();
+        $this->attachRoleWithPermission($creator, $org, ['create-bills']);
+        $this->attachRoleWithPermission($poster, $org, 'approve-bills');
+
+        $bill = VendorBill::factory()->create([
+            'organization_id' => $org->id,
+            'vendor_id' => $vendor->id,
+            'created_by' => $creator->id,
+            'currency_id' => $currencyId,
+            'base_currency_id' => $org->base_currency_id,
+            'status' => VendorBillStatus::Draft,
+            'bill_date' => today()->toDateString(),
+            'due_date' => today()->addDays(15)->toDateString(),
+            'subtotal' => 0,
+            'discount_amount' => 0,
+            'tax_amount' => 0,
+            'total_amount' => 0,
+            'paid_amount' => 0,
+            'balance_due' => 0,
+        ]);
+
+        $this->actingAs($poster)
+            ->post("/bills/{$bill->id}/post")
+            ->assertRedirect()
+            ->assertSessionHas('error', 'A bill with a zero total cannot be posted.');
+
+        $this->assertSame(VendorBillStatus::Draft, $bill->fresh()->status);
     }
 
     public function test_post_forbids_creator_from_posting_own_bill(): void

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
+import ConfirmVoidDialog from '@/Components/ConfirmVoidDialog';
 import Pagination from '@/Components/Pagination';
 import StatusBadge from '@/Components/StatusBadge';
 import VendorBillForm from '@/Pages/Bills/VendorBillForm';
@@ -16,6 +17,7 @@ export default function VendorBillsIndex() {
     const [status, setStatus] = useState('');
 
     const [showModal, setShowModal] = useState(false);
+    const [voidingBill, setVoidingBill] = useState(null);
 
     useEffect(() => {
         if (!status) {
@@ -95,7 +97,7 @@ export default function VendorBillsIndex() {
                                                 </Button>
                                             )}
                                             {bill.can?.void && (
-                                                <Button size="sm" variant="outline" className="text-warning" onClick={() => window.confirm('Void this bill? This cannot be undone.') && router.post(`/bills/${bill.id}/void`, { reason: 'Voided by user.' })}>
+                                                <Button size="sm" variant="outline" className="text-warning" onClick={() => setVoidingBill(bill)}>
                                                     Void
                                                 </Button>
                                             )}
@@ -118,6 +120,17 @@ export default function VendorBillsIndex() {
                 currencies={currencies ?? []}
                 taxCodes={taxCodes ?? []}
                 baseCurrencyId={baseCurrencyId}
+            />
+
+            <ConfirmVoidDialog
+                open={Boolean(voidingBill)}
+                title={`Void ${voidingBill?.bill_number ?? 'this bill'}?`}
+                description="This cannot be undone. A posted bill will be reversed in the ledger, so provide a reason for the audit trail."
+                onClose={() => setVoidingBill(null)}
+                onConfirm={(reason) => {
+                    router.post(`/bills/${voidingBill.id}/void`, { reason });
+                    setVoidingBill(null);
+                }}
             />
         </>
     );

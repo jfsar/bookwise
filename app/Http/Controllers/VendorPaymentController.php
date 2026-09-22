@@ -8,6 +8,7 @@ use App\Actions\VendorPayment\CreateVendorPayment;
 use App\Actions\VendorPayment\PostVendorPayment;
 use App\Actions\VendorPayment\VoidVendorPayment;
 use App\Enums\VendorBillStatus;
+use App\Enums\VendorDebitNoteStatus;
 use App\Enums\VendorPaymentStatus;
 use App\Http\Requests\AllocateVendorPaymentRequest;
 use App\Http\Requests\StoreVendorPaymentRequest;
@@ -18,6 +19,7 @@ use App\Models\Organization;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Models\VendorBill;
+use App\Models\VendorDebitNote;
 use App\Models\VendorPayment;
 use App\Models\VendorPaymentAllocation;
 use Illuminate\Database\QueryException;
@@ -47,7 +49,7 @@ class VendorPaymentController extends Controller
         $this->authorize('viewAny', [VendorPayment::class, $organization]);
 
         $payments = VendorPayment::forOrganization($organization)
-            ->with(['vendor', 'currency', 'cashAccount'])
+            ->with(['vendor', 'currency', 'cashAccount', 'allocations'])
             ->when($request->filled('search'), function ($query) use ($request) {
                 $term = '%'.$request->string('search').'%';
 
@@ -280,10 +282,19 @@ class VendorPaymentController extends Controller
             ->selectRaw('vendor_payment_allocations.bill_id, SUM(vendor_payment_allocations.amount) as total')
             ->pluck('total', 'bill_id');
 
+        $debitedByBill = VendorDebitNote::query()
+            ->where('organization_id', $organization->id)
+            ->whereIn('bill_id', $bills->pluck('id'))
+            ->where('status', VendorDebitNoteStatus::Posted)
+            ->groupBy('bill_id')
+            ->selectRaw('bill_id, SUM(total_amount) as total')
+            ->pluck('total', 'bill_id');
+
         return $bills
-            ->map(function (VendorBill $bill) use ($payment, $pendingByBill) {
+            ->map(function (VendorBill $bill) use ($payment, $pendingByBill, $debitedByBill) {
                 $pending = (float) ($pendingByBill[$bill->id] ?? 0);
-                $available = round((float) $bill->balance_due - $pending, 4);
+                $debited = (float) ($debitedByBill[$bill->id] ?? 0);
+                $available = round((float) $bill->balance_due - $pending - $debited, 4);
                 $remaining = round((float) $payment->amount - $payment->totalAllocated(), 4);
 
                 return [

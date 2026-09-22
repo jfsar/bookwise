@@ -101,6 +101,11 @@ class CreateVendorBill
 
                     $extended = round($quantity * $unitPrice, 4);
                     $net = round($extended - $discount, 4);
+
+                    if ($net < 0) {
+                        throw new \RuntimeException('The line discount cannot exceed its extended amount.');
+                    }
+
                     $lineTax = $appliedRate !== null ? round($net * $appliedRate / 100, 4) : 0.0;
                     $lineTotal = round($net + $lineTax, 4);
 

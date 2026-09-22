@@ -29,6 +29,8 @@ class VendorBillSettlement
 
         $bills = VendorBill::forOrganization($payment->organization)
             ->whereIn('id', $billIds)
+            ->lockForUpdate()
+            ->orderBy('id')
             ->get();
 
         foreach ($bills as $bill) {

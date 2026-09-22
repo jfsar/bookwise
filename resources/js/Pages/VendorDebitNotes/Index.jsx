@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 
 import VendorDebitNoteForm from '@/Pages/VendorDebitNotes/VendorDebitNoteForm';
 import AppLayout from '@/Layouts/AppLayout';
+import ConfirmVoidDialog from '@/Components/ConfirmVoidDialog';
 import Pagination from '@/Components/Pagination';
 import StatusBadge from '@/Components/StatusBadge';
 import { Button } from '@/Components/ui/button';
@@ -18,6 +19,7 @@ export default function VendorDebitNotesIndex() {
     const [search, setSearch] = useState('');
 
     const [showModal, setShowModal] = useState(false);
+    const [voidingDebitNote, setVoidingDebitNote] = useState(null);
 
     const firstRender = useRef(true);
 
@@ -104,7 +106,7 @@ export default function VendorDebitNotesIndex() {
                                                 </Button>
                                             )}
                                             {debitNote.can?.void && (
-                                                <Button size="sm" variant="outline" className="text-warning" onClick={() => window.confirm('Void this debit note? This cannot be undone.') && router.post(`/vendor-debit-notes/${debitNote.id}/void`, { reason: 'Voided by user.' })}>
+                                                <Button size="sm" variant="outline" className="text-warning" onClick={() => setVoidingDebitNote(debitNote)}>
                                                     Void
                                                 </Button>
                                             )}
@@ -124,6 +126,17 @@ export default function VendorDebitNotesIndex() {
                 onClose={() => setShowModal(false)}
                 vendors={vendors ?? []}
                 bills={bills ?? []}
+            />
+
+            <ConfirmVoidDialog
+                open={Boolean(voidingDebitNote)}
+                title={`Void ${voidingDebitNote?.debit_note_number ?? 'this debit note'}?`}
+                description="This cannot be undone. A posted debit note will be reversed in the ledger, so provide a reason for the audit trail."
+                onClose={() => setVoidingDebitNote(null)}
+                onConfirm={(reason) => {
+                    router.post(`/vendor-debit-notes/${voidingDebitNote.id}/void`, { reason });
+                    setVoidingDebitNote(null);
+                }}
             />
         </>
     );

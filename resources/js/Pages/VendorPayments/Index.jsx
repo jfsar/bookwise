@@ -4,6 +4,7 @@ import { router, usePage } from '@inertiajs/react';
 import VendorPaymentForm from '@/Pages/VendorPayments/VendorPaymentForm';
 import VendorPaymentAllocationDialog from '@/Pages/VendorPayments/AllocationDialog';
 import AppLayout from '@/Layouts/AppLayout';
+import ConfirmVoidDialog from '@/Components/ConfirmVoidDialog';
 import Pagination from '@/Components/Pagination';
 import StatusBadge from '@/Components/StatusBadge';
 import { Button } from '@/Components/ui/button';
@@ -18,6 +19,7 @@ export default function VendorPaymentsIndex() {
 
     const [showModal, setShowModal] = useState(false);
     const [allocatingPayment, setAllocatingPayment] = useState(null);
+    const [voidingPayment, setVoidingPayment] = useState(null);
 
     useEffect(() => {
         if (!status) {
@@ -104,7 +106,7 @@ export default function VendorPaymentsIndex() {
                                                 </Button>
                                             )}
                                             {payment.can?.void && (
-                                                <Button size="sm" variant="outline" className="text-warning" onClick={() => window.confirm('Void this payment? This cannot be undone.') && router.post(`/vendor-payments/${payment.id}/void`, { reason: 'Voided by user.' })}>
+                                                <Button size="sm" variant="outline" className="text-warning" onClick={() => setVoidingPayment(payment)}>
                                                     Void
                                                 </Button>
                                             )}
@@ -132,6 +134,17 @@ export default function VendorPaymentsIndex() {
                 payment={allocatingPayment}
                 open={Boolean(allocatingPayment)}
                 onClose={() => setAllocatingPayment(null)}
+            />
+
+            <ConfirmVoidDialog
+                open={Boolean(voidingPayment)}
+                title={`Void ${voidingPayment?.payment_number ?? 'this payment'}?`}
+                description="This cannot be undone. The payment and its allocations will be reversed, so provide a reason for the audit trail."
+                onClose={() => setVoidingPayment(null)}
+                onConfirm={(reason) => {
+                    router.post(`/vendor-payments/${voidingPayment.id}/void`, { reason });
+                    setVoidingPayment(null);
+                }}
             />
         </>
     );

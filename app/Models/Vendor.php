@@ -76,11 +76,6 @@ class Vendor extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    public function addresses(): HasMany
-    {
-        return $this->hasMany(VendorAddress::class);
-    }
-
     public function bills(): HasMany
     {
         return $this->hasMany(VendorBill::class);

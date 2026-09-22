@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ReportType;
 use App\Enums\VendorBillStatus;
+use App\Enums\VendorDebitNoteStatus;
 use App\Jobs\ExportReportJob;
 use App\Models\Account;
 use App\Models\Organization;
@@ -12,6 +13,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Models\VendorBill;
+use App\Models\VendorDebitNote;
 use App\Reports\ReportCsvExporter;
 use App\Reports\ReportFactory;
 use Carbon\Carbon;
@@ -91,6 +93,22 @@ class ApAgingReportTest extends TestCase
             'total_amount' => $bill['balance_due'],
             'paid_amount' => 0,
             'balance_due' => $bill['balance_due'],
+        ]);
+    }
+
+    private function seedPostedDebitNote(Organization $org, VendorBill $bill, float $total): VendorDebitNote
+    {
+        return VendorDebitNote::factory()->posted()->create([
+            'organization_id' => $org->id,
+            'vendor_id' => $bill->vendor_id,
+            'bill_id' => $bill->id,
+            'currency_id' => $org->base_currency_id,
+            'exchange_rate' => 1,
+            'subtotal' => $total,
+            'tax_amount' => 0,
+            'total_amount' => $total,
+            'status' => VendorDebitNoteStatus::Posted,
+            'created_by' => User::factory()->create()->id,
         ]);
     }
 
@@ -269,6 +287,66 @@ class ApAgingReportTest extends TestCase
         $this->assertCount(1, $props['data']['rows']);
         $this->assertSame(300.0, $props['data']['rows'][0]['current']);
         $this->assertSame(300.0, $props['data']['totals']['current']);
+    }
+
+    public function test_aging_nets_posted_debit_notes_from_bill_balances(): void
+    {
+        $fixture = $this->seedAging();
+        $asOf = Carbon::create(2026, 4, 10);
+
+        $debitedBill = $this->createPostedBill($fixture['org'], $fixture['vendor'], [
+            'due_date' => $asOf->copy()->addDays(1),
+            'balance_due' => 100,
+        ]);
+
+        $this->seedPostedDebitNote($fixture['org'], $debitedBill, 40);
+
+        $this->createPostedBill($fixture['org'], $fixture['vendor'], [
+            'due_date' => $asOf->copy()->addDays(1),
+            'balance_due' => 100,
+        ]);
+
+        $props = $this->responseProps(
+            $this->actingAs($fixture['user'])
+                ->get('/reports/ap-aging?as_of=2026-04-10')
+                ->assertOk()
+        );
+
+        $this->assertCount(1, $props['data']['rows']);
+        $row = $props['data']['rows'][0];
+        $this->assertSame(160.0, $row['current']);
+        $this->assertSame(160.0, $row['total']);
+        $this->assertSame(160.0, $props['data']['totals']['current']);
+        $this->assertSame(160.0, $props['data']['totals']['total']);
+    }
+
+    public function test_bills_fully_covered_by_debit_notes_are_omitted_from_aging(): void
+    {
+        $fixture = $this->seedAging();
+        $asOf = Carbon::create(2026, 4, 10);
+
+        $coveredBill = $this->createPostedBill($fixture['org'], $fixture['vendor'], [
+            'due_date' => $asOf->copy()->subDays(10),
+            'balance_due' => 100,
+        ]);
+
+        $this->seedPostedDebitNote($fixture['org'], $coveredBill, 100);
+
+        $this->createPostedBill($fixture['org'], $fixture['vendor'], [
+            'due_date' => $asOf->copy()->subDays(10),
+            'balance_due' => 50,
+        ]);
+
+        $props = $this->responseProps(
+            $this->actingAs($fixture['user'])
+                ->get('/reports/ap-aging?as_of=2026-04-10')
+                ->assertOk()
+        );
+
+        $this->assertCount(1, $props['data']['rows']);
+        $this->assertSame(50.0, $props['data']['rows'][0]['days_1_30']);
+        $this->assertSame(50.0, $props['data']['rows'][0]['total']);
+        $this->assertSame(50.0, $props['data']['totals']['days_1_30']);
     }
 
     public function test_as_of_defaults_to_today(): void
