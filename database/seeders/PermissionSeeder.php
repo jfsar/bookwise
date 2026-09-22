@@ -50,6 +50,23 @@ class PermissionSeeder extends Seeder
             ['name' => 'create-credit-notes', 'description' => 'Create customer credit notes.'],
             ['name' => 'approve-credit-notes', 'description' => 'Post customer credit notes to the ledger.'],
             ['name' => 'void-credit-notes', 'description' => 'Void draft customer credit notes.'],
+            ['name' => 'view-vendors', 'description' => 'View vendors.'],
+            ['name' => 'create-vendors', 'description' => 'Create new vendors.'],
+            ['name' => 'update-vendors', 'description' => 'Update existing vendors.'],
+            ['name' => 'archive-vendors', 'description' => 'Archive/deactivate vendors.'],
+            ['name' => 'view-bills', 'description' => 'View vendor bills.'],
+            ['name' => 'create-bills', 'description' => 'Create vendor bills.'],
+            ['name' => 'approve-bills', 'description' => 'Approve and post vendor bills.'],
+            ['name' => 'void-bills', 'description' => 'Void draft, posted or partially paid vendor bills.'],
+            ['name' => 'view-vendor-payments', 'description' => 'View vendor payments.'],
+            ['name' => 'create-vendor-payments', 'description' => 'Create vendor payments.'],
+            ['name' => 'allocate-vendor-payments', 'description' => 'Allocate vendor payments to bills.'],
+            ['name' => 'approve-vendor-payments', 'description' => 'Post vendor payments to the ledger.'],
+            ['name' => 'void-vendor-payments', 'description' => 'Void draft or posted vendor payments.'],
+            ['name' => 'view-vendor-debit-notes', 'description' => 'View vendor debit notes.'],
+            ['name' => 'create-vendor-debit-notes', 'description' => 'Create vendor debit notes.'],
+            ['name' => 'approve-vendor-debit-notes', 'description' => 'Post vendor debit notes to the ledger.'],
+            ['name' => 'void-vendor-debit-notes', 'description' => 'Void draft vendor debit notes.'],
         ];
 
         foreach ($permissions as $permission) {
@@ -100,6 +117,16 @@ class PermissionSeeder extends Seeder
                 'allocate-payments',
                 'view-credit-notes',
                 'create-credit-notes',
+                'view-vendors',
+                'create-vendors',
+                'update-vendors',
+                'view-bills',
+                'create-bills',
+                'view-vendor-payments',
+                'create-vendor-payments',
+                'allocate-vendor-payments',
+                'view-vendor-debit-notes',
+                'create-vendor-debit-notes',
             ])->get());
         }
 
@@ -117,6 +144,10 @@ class PermissionSeeder extends Seeder
                 'view-invoices',
                 'view-payments',
                 'view-credit-notes',
+                'view-vendors',
+                'view-bills',
+                'view-vendor-payments',
+                'view-vendor-debit-notes',
             ])->get());
         }
 

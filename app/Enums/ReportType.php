@@ -10,6 +10,7 @@ enum ReportType: string
     case BalanceSheet = 'balance-sheet';
     case CashFlow = 'cash-flow';
     case ArAging = 'ar-aging';
+    case ApAging = 'ap-aging';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum ReportType: string
             self::BalanceSheet => 'Balance Sheet',
             self::CashFlow => 'Cash Flow Statement',
             self::ArAging => 'AR Aging',
+            self::ApAging => 'AP Aging',
         };
     }
 }
