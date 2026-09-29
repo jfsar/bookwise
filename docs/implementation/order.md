@@ -12,19 +12,17 @@ This log tracks SRS requirement execution (see `SRS.md`). Only entries with **St
 | 3 — Approval & Security Controls | complete |
 | 4 — Accounts Receivable | complete |
 | 5 — Accounts Payable | complete |
-| 6 — Banking | not_started |
-| 7 — Enterprise & Operational Features | not_started |
+| 6 — Banking | complete |
+| 7 — Enterprise & Operational Features | in_progress |
 | 8 — Reporting Optimization & Derived Performance | not_started |
 | 9 — Reliability & Production Hardening | not_started |
 
-## Phase 5 — Accounts Payable — Status: complete
+## Phase 7 — Enterprise & Operational Features (§7.16 Recurring Journals) — Status: in_progress
 
-Implemented (migrations applied on `pgsql_direct`; suites passing):
+Scope: recurring journal definitions with automatic post-to-draft generation, effective dating, and execution history.
 
-- **Vendor Bills (§7.29–§7.30)**: `VendorBillTest` (24 tests, 80 assertions).
-- **Vendor Payments (§7.31)**: `VendorPaymentTest` (24 tests, 83 assertions).
-- **Payment Allocation** (bills settlement): `VendorPaymentAllocationTest` (18 tests, 80 assertions).
-- **Vendor Debit Notes** (§7.27 semantics applied to payables per §0.18): `VendorDebitNoteTest` (24 tests, 76 assertions).
-- **AP Aging** (§67; buckets from §7.26 applied to payables): `ApAgingReportTest` (10 tests, 70 assertions). Files: `app/Reports/ApAgingReport.php`, `app/Enums/ReportType.php` (`ApAging` case), `app/Reports/ReportFactory.php`, `app/Reports/ReportCsvExporter.php`, `app/Http/Controllers/ReportController.php`, `routes/web.php` (`reports.ap-aging`), `resources/js/Pages/Reports/ApAging.jsx`, `resources/js/Layouts/AppLayout.jsx`.
+- **Next:** Define the model, migration, and validation rules for recurring journal definitions and their lines, then the generation action.
 
-**Next:** Phase 6 — Banking (Bank Accounts §7.32, Bank Transactions §7.33, Reconciliation §7.34).
+## Next
+
+Phase 7 item 1 of 4: §7.16 Recurring Journals, then §7.39 Notifications, §7.38 Attachments, and advanced permissions.

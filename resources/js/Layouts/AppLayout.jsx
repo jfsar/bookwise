@@ -9,6 +9,7 @@ import {
     Contact,
     FileText,
     History,
+    Landmark,
     LayoutDashboard,
     ListChecks,
     Lock,
@@ -59,6 +60,9 @@ const navigation = [
             { label: 'Bills', href: '/bills', icon: FileText },
             { label: 'Vendor Payments', href: '/vendor-payments', icon: Banknote },
             { label: 'Vendor Debit Notes', href: '/vendor-debit-notes', icon: TicketPercent },
+            { label: 'Bank Accounts', href: '/bank-accounts', icon: Landmark },
+            { label: 'Bank Transactions', href: '/bank-transactions', icon: BanknoteArrowDown },
+            { label: 'Reconciliations', href: '/bank-reconciliations', icon: ListChecks },
         ],
     },
     {

@@ -67,6 +67,17 @@ class PermissionSeeder extends Seeder
             ['name' => 'create-vendor-debit-notes', 'description' => 'Create vendor debit notes.'],
             ['name' => 'approve-vendor-debit-notes', 'description' => 'Post vendor debit notes to the ledger.'],
             ['name' => 'void-vendor-debit-notes', 'description' => 'Void draft vendor debit notes.'],
+            ['name' => 'view-bank-accounts', 'description' => 'View bank accounts.'],
+            ['name' => 'create-bank-accounts', 'description' => 'Create new bank accounts.'],
+            ['name' => 'update-bank-accounts', 'description' => 'Update existing bank accounts.'],
+            ['name' => 'archive-bank-accounts', 'description' => 'Deactivate/close bank accounts.'],
+            ['name' => 'view-bank-transactions', 'description' => 'View bank transactions.'],
+            ['name' => 'create-bank-transactions', 'description' => 'Record manual bank transactions.'],
+            ['name' => 'update-bank-transactions', 'description' => 'Edit unreconciled manual bank transactions.'],
+            ['name' => 'import-bank-transactions', 'description' => 'Import bank statement files.'],
+            ['name' => 'view-bank-reconciliations', 'description' => 'View bank reconciliations.'],
+            ['name' => 'manage-bank-reconciliations', 'description' => 'Start reconciliations and match bank transactions.'],
+            ['name' => 'finalize-bank-reconciliations', 'description' => 'Finalize and reopen bank reconciliations.'],
         ];
 
         foreach ($permissions as $permission) {
@@ -127,6 +138,16 @@ class PermissionSeeder extends Seeder
                 'allocate-vendor-payments',
                 'view-vendor-debit-notes',
                 'create-vendor-debit-notes',
+                'view-bank-accounts',
+                'create-bank-accounts',
+                'update-bank-accounts',
+                'view-bank-transactions',
+                'create-bank-transactions',
+                'update-bank-transactions',
+                'import-bank-transactions',
+                'view-bank-reconciliations',
+                'manage-bank-reconciliations',
+                'finalize-bank-reconciliations',
             ])->get());
         }
 
@@ -148,6 +169,9 @@ class PermissionSeeder extends Seeder
                 'view-bills',
                 'view-vendor-payments',
                 'view-vendor-debit-notes',
+                'view-bank-accounts',
+                'view-bank-transactions',
+                'view-bank-reconciliations',
             ])->get());
         }
 
