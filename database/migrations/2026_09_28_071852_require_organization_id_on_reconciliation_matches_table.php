@@ -8,6 +8,19 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
+     * This migration must run outside a transaction: the backfill and the
+     * SET NOT NULL are DDL/DML on a table the app is already reading, and on
+     * the pooled Neon endpoint a prepared ALTER inside a transaction aborts
+     * the server transaction (SQLSTATE 25P02). It also holds an ACCESS
+     * EXCLUSIVE lock for the whole backfill if wrapped.
+     *
+     * The statements are individually idempotent — the UPDATE and DELETE only
+     * touch rows where organization_id IS NULL — so a mid-migration failure
+     * leaves recoverable partial state rather than a corrupt one.
+     */
+    public $withinTransaction = false;
+
+    /**
      * Run the migrations.
      *
      * INV-008 / tenant consistency: reconciliation_matches is an organization-owned

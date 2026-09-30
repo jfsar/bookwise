@@ -10,6 +10,7 @@ use App\Actions\JournalEntry\SubmitJournalEntry;
 use App\Enums\JournalEntryStatus;
 use App\Models\Account;
 use App\Models\AccountingPeriod;
+use App\Models\AuditLog;
 use App\Models\BankAccount;
 use App\Models\BankReconciliation;
 use App\Models\BankTransaction;
@@ -71,6 +72,21 @@ class BankReconciliationTest extends TestCase
     }
 
     /**
+     * A bank transaction on an exact date, for period-boundary assertions.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    private function bankTransactionOn(BankAccount $bankAccount, string $date, array $overrides = []): BankTransaction
+    {
+        return BankTransaction::factory()->debit(400)->create(array_merge([
+            'organization_id' => $bankAccount->organization_id,
+            'bank_account_id' => $bankAccount->id,
+            'currency_id' => $bankAccount->currency_id,
+            'transaction_date' => $date,
+        ], $overrides));
+    }
+
+    /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
      */
@@ -116,7 +132,7 @@ class BankReconciliationTest extends TestCase
      * Create a POSTED journal entry line on the bank account's ledger account so
      * reconciliation matches can point at authoritative ledger data.
      */
-    private function postedLedgerLine(Organization $org, Account $ledger, Currency $currency, float $amount): JournalEntryLine
+    private function postedLedgerLine(Organization $org, Account $ledger, Currency $currency, float $amount, ?string $entryDate = null): JournalEntryLine
     {
         $journal = Journal::factory()->create(['organization_id' => $org->id]);
         $fiscalYear = FiscalYear::factory()->create(['organization_id' => $org->id]);
@@ -135,7 +151,7 @@ class BankReconciliationTest extends TestCase
             'currency_id' => $currency->id,
             'fiscal_year_id' => $fiscalYear->id,
             'accounting_period_id' => $period->id,
-            'entry_date' => now()->toDateString(),
+            'entry_date' => $entryDate ?? now()->toDateString(),
             'description' => 'Ledger side of the reconciliation',
             'lines' => [
                 ['account_id' => $ledger->id, 'debit' => $amount, 'credit' => 0, 'description' => null],
@@ -238,6 +254,202 @@ class BankReconciliationTest extends TestCase
         ]);
 
         $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}")->assertNotFound();
+    }
+
+    public function test_show_forbids_a_member_without_permission(): void
+    {
+        [$org, $bankAccount] = $this->bankSetup();
+        $preparer = $this->attachRoleWithPermission(User::factory()->create(), $org, self::MANAGER_PERMISSIONS);
+        $reconciliation = $this->startReconciliation($org, $bankAccount, $preparer);
+
+        // Same organization, so the 404 tenant guard passes and the policy is
+        // the only thing standing between this user and the statement.
+        $outsider = User::factory()->create();
+        $outsider->organizations()->attach($org->id, ['membership_status' => 'active']);
+
+        $this->actingAs($outsider)->get("/bank-reconciliations/{$reconciliation->id}")->assertForbidden();
+    }
+
+    public function test_show_scopes_open_transactions_to_the_statement_period(): void
+    {
+        [$org, $bankAccount] = $this->bankSetup();
+        $user = $this->attachRoleWithPermission(User::factory()->create(), $org, self::MANAGER_PERMISSIONS);
+        $reconciliation = $this->startReconciliation($org, $bankAccount, $user);
+
+        $cleared = $this->bankTransactionOn($bankAccount, '2026-01-15');
+        $this->bankTransactionOn($bankAccount, '2025-12-20'); // cheque issued before the period
+        $this->bankTransactionOn($bankAccount, '2026-02-03'); // deposit still in transit
+
+        $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('BankReconciliations/Show')
+                ->has('unmatchedTransactions', 1)
+                ->where('unmatchedTransactions.0.id', $cleared->id)
+                ->where('unmatchedTotal', 1)
+                ->where('outOfPeriodMatchCount', 0)
+                ->where('filters.includeOutOfPeriod', false));
+
+        // The period is the default scope, not a hard filter: a timing
+        // difference must stay one checkbox away.
+        $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}?include_out_of_period=1")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('unmatchedTransactions', 3)
+                ->where('unmatchedTotal', 3)
+                ->where('filters.includeOutOfPeriod', true));
+    }
+
+    public function test_show_scopes_candidate_lines_to_the_statement_period(): void
+    {
+        [$org, $bankAccount, $ledger] = $this->bankSetup();
+        $user = $this->attachRoleWithPermission(User::factory()->create(), $org, self::MANAGER_PERMISSIONS);
+        $reconciliation = $this->startReconciliation($org, $bankAccount, $user);
+
+        $inPeriod = $this->postedLedgerLine($org, $ledger, $bankAccount->currency, 400, '2026-01-20');
+        $this->postedLedgerLine($org, $ledger, $bankAccount->currency, 500, '2026-02-02');
+
+        $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('candidateJournalLines', 1)
+                ->where('candidateJournalLines.0.id', $inPeriod->id)
+                ->where('candidateJournalLines.0.entry_date', '2026-01-20')
+                // A line description is optional, so the entry it belongs to
+                // has to be enough for a human to recognise the line.
+                ->where('candidateJournalLines.0.description', 'Ledger side of the reconciliation')
+                ->where('candidateLineTotal', 1));
+
+        $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}?include_out_of_period=1")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('candidateJournalLines', 2)
+                ->where('candidateLineTotal', 2));
+    }
+
+    public function test_show_search_narrows_both_picker_lists(): void
+    {
+        [$org, $bankAccount, $ledger] = $this->bankSetup();
+        $user = $this->attachRoleWithPermission(User::factory()->create(), $org, self::MANAGER_PERMISSIONS);
+        $reconciliation = $this->startReconciliation($org, $bankAccount, $user);
+
+        $payroll = $this->bankTransactionOn($bankAccount, '2026-01-10', [
+            'description' => 'Monthly payroll run',
+            'reference' => 'PR-4471',
+        ]);
+        $this->bankTransactionOn($bankAccount, '2026-01-11', [
+            'description' => 'Office supplies',
+            'reference' => 'INV-882',
+        ]);
+
+        $line = $this->postedLedgerLine($org, $ledger, $bankAccount->currency, 400, '2026-01-20');
+
+        $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}?search=payroll")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('unmatchedTransactions', 1)
+                ->where('unmatchedTransactions.0.id', $payroll->id)
+                ->where('unmatchedTotal', 1)
+                ->where('filters.search', 'payroll'));
+
+        $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}?line_search=Ledger%20side")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('candidateJournalLines', 1)
+                ->where('candidateJournalLines.0.id', $line->id)
+                ->where('candidateLineTotal', 1)
+                ->where('filters.lineSearch', 'Ledger side'));
+
+        // A numeric search also resolves a journal entry number, which is how
+        // an accountant refers to a posted entry.
+        $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}?line_search={$line->journal_entry_id}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('candidateJournalLines', 1)
+                ->where('candidateJournalLines.0.id', $line->id));
+    }
+
+    public function test_show_truncates_the_open_transaction_picker_and_reports_the_real_total(): void
+    {
+        [$org, $bankAccount] = $this->bankSetup();
+        $user = $this->attachRoleWithPermission(User::factory()->create(), $org, self::MANAGER_PERMISSIONS);
+        $reconciliation = $this->startReconciliation($org, $bankAccount, $user);
+
+        $limit = 200;
+        BankTransaction::factory()->count($limit + 5)->debit(10)->create([
+            'organization_id' => $org->id,
+            'bank_account_id' => $bankAccount->id,
+            'currency_id' => $bankAccount->currency_id,
+            'transaction_date' => '2026-01-15',
+        ]);
+
+        // Silently hiding rows would make a reconciliation that looks complete
+        // while rows were never offered, so the cap is reported, not hidden.
+        $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('unmatchedTransactions', $limit)
+                ->where('unmatchedTotal', $limit + 5));
+    }
+
+    public function test_show_flags_a_match_made_outside_the_statement_period(): void
+    {
+        [$org, $bankAccount] = $this->bankSetup();
+        $user = $this->attachRoleWithPermission(User::factory()->create(), $org, self::MANAGER_PERMISSIONS);
+        $reconciliation = $this->startReconciliation($org, $bankAccount, $user);
+
+        // Written before the period, cleared inside it: the canonical timing
+        // difference, which must stay matchable but must be visible.
+        $bankTransaction = $this->bankTransactionOn($bankAccount, '2025-12-28');
+        $ledgerLine = $this->postedLedgerLine($org, $bankAccount->account, $bankAccount->currency, 400, '2026-01-20');
+
+        $this->actingAs($user)
+            ->post("/bank-reconciliations/{$reconciliation->id}/matches", [
+                'bank_transaction_id' => $bankTransaction->id,
+                'journal_entry_line_id' => $ledgerLine->id,
+                'matched_amount' => 400,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('matches', 1)
+                ->where('matches.0.out_of_period', true)
+                ->where('outOfPeriodMatchCount', 1));
+
+        $audit = AuditLog::where('action', 'bank-reconciliation.matched')->firstOrFail();
+        $this->assertTrue($audit->new_values['out_of_period'] ?? null, 'the out-of-period match is recorded in the audit trail');
+    }
+
+    public function test_show_does_not_flag_a_match_inside_the_statement_period(): void
+    {
+        [$org, $bankAccount] = $this->bankSetup();
+        $user = $this->attachRoleWithPermission(User::factory()->create(), $org, self::MANAGER_PERMISSIONS);
+        $reconciliation = $this->startReconciliation($org, $bankAccount, $user);
+
+        $bankTransaction = $this->bankTransactionOn($bankAccount, '2026-01-20');
+        $ledgerLine = $this->postedLedgerLine($org, $bankAccount->account, $bankAccount->currency, 400, '2026-01-22');
+
+        $this->actingAs($user)
+            ->post("/bank-reconciliations/{$reconciliation->id}/matches", [
+                'bank_transaction_id' => $bankTransaction->id,
+                'journal_entry_line_id' => $ledgerLine->id,
+                'matched_amount' => 400,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->actingAs($user)->get("/bank-reconciliations/{$reconciliation->id}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('matches', 1)
+                ->where('matches.0.out_of_period', false)
+                ->where('outOfPeriodMatchCount', 0));
+
+        $audit = AuditLog::where('action', 'bank-reconciliation.matched')->firstOrFail();
+        $this->assertFalse($audit->new_values['out_of_period'] ?? null);
     }
 
     public function test_store_creates_in_progress_reconciliation_with_derived_difference(): void

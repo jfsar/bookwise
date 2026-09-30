@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 
 import { Button } from '@/Components/ui/button';
@@ -21,10 +22,16 @@ const emptyForm = {
 };
 
 export default function ReconciliationForm({ open, onClose, bankAccounts, defaultBankAccountId }) {
-    const { data, setData, errors, post, processing } = useForm({
-        ...emptyForm,
-        bank_account_id: defaultBankAccountId ?? '',
-    });
+    const { data, setData, errors, post, processing } = useForm(emptyForm);
+
+    // Re-seed on open: useForm only reads its initial values on first mount, so
+    // changing the bank account filter on the index page would otherwise leave
+    // this dialog defaulting to the account that was selected earlier.
+    useEffect(() => {
+        if (open) {
+            setData({ ...emptyForm, bank_account_id: defaultBankAccountId ?? '' });
+        }
+    }, [open, defaultBankAccountId]);
 
     function submit(event) {
         event.preventDefault();
@@ -42,8 +49,9 @@ export default function ReconciliationForm({ open, onClose, bankAccounts, defaul
                 <form onSubmit={submit}>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
-                            <Label>Bank Account *</Label>
+                            <Label htmlFor="recon-form-account">Bank Account *</Label>
                             <NativeSelect
+                                id="recon-form-account"
                                 value={data.bank_account_id}
                                 onChange={(event) => setData('bank_account_id', event.target.value)}
                                 className="mt-1 w-full"
@@ -58,8 +66,9 @@ export default function ReconciliationForm({ open, onClose, bankAccounts, defaul
                             {errors.bank_account_id && <p className="mt-1 text-sm font-medium text-destructive">{errors.bank_account_id}</p>}
                         </div>
                         <div className="col-span-2">
-                            <Label>Statement Period Start *</Label>
+                            <Label htmlFor="recon-form-start">Statement Period Start *</Label>
                             <Input
+                                id="recon-form-start"
                                 type="date"
                                 value={data.statement_start_date}
                                 onChange={(event) => setData('statement_start_date', event.target.value)}
@@ -70,8 +79,9 @@ export default function ReconciliationForm({ open, onClose, bankAccounts, defaul
                             )}
                         </div>
                         <div>
-                            <Label>Statement Period End *</Label>
+                            <Label htmlFor="recon-form-end">Statement Period End *</Label>
                             <Input
+                                id="recon-form-end"
                                 type="date"
                                 value={data.statement_end_date}
                                 onChange={(event) => setData('statement_end_date', event.target.value)}
@@ -82,8 +92,9 @@ export default function ReconciliationForm({ open, onClose, bankAccounts, defaul
                             )}
                         </div>
                         <div>
-                            <Label>Statement Date *</Label>
+                            <Label htmlFor="recon-form-date">Statement Date *</Label>
                             <Input
+                                id="recon-form-date"
                                 type="date"
                                 value={data.statement_date}
                                 onChange={(event) => setData('statement_date', event.target.value)}
@@ -92,8 +103,9 @@ export default function ReconciliationForm({ open, onClose, bankAccounts, defaul
                             {errors.statement_date && <p className="mt-1 text-sm font-medium text-destructive">{errors.statement_date}</p>}
                         </div>
                         <div>
-                            <Label>Statement Opening Balance *</Label>
+                            <Label htmlFor="recon-form-open">Statement Opening Balance *</Label>
                             <Input
+                                id="recon-form-open"
                                 type="number"
                                 min="0"
                                 step="0.01"
@@ -104,8 +116,9 @@ export default function ReconciliationForm({ open, onClose, bankAccounts, defaul
                             {errors.opening_balance && <p className="mt-1 text-sm font-medium text-destructive">{errors.opening_balance}</p>}
                         </div>
                         <div>
-                            <Label>Statement Closing Balance *</Label>
+                            <Label htmlFor="recon-form-close">Statement Closing Balance *</Label>
                             <Input
+                                id="recon-form-close"
                                 type="number"
                                 min="0"
                                 step="0.01"

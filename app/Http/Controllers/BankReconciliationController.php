@@ -24,6 +24,15 @@ use Inertia\Response;
 
 class BankReconciliationController extends Controller
 {
+    /**
+     * The statement picker and the ledger picker are search-and-scope views over
+     * potentially years of bank activity, so both are capped. `*Total` is sent
+     * alongside each list so the page can say when it is showing a subset.
+     */
+    private const OPEN_TRANSACTION_LIMIT = 200;
+
+    private const CANDIDATE_LINE_LIMIT = 200;
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -83,11 +92,39 @@ class BankReconciliationController extends Controller
 
         $bankReconciliation->load(['bankAccount', 'currency', 'preparer', 'reconciler', 'matches.bankTransaction', 'matches.journalEntryLine']);
 
-        $unmatchedTransactions = BankTransaction::forOrganization($organization)
+        $statementStart = $bankReconciliation->statement_start_date;
+        $statementEnd = $bankReconciliation->statement_end_date;
+
+        // Timing differences are legitimate, so out-of-period rows stay
+        // selectable — the period is the default scope, not a hard filter.
+        $includeOutOfPeriod = $request->boolean('include_out_of_period');
+        $search = trim((string) $request->input('search', ''));
+        $lineSearch = trim((string) $request->input('line_search', ''));
+
+        $openTransactionQuery = BankTransaction::forOrganization($organization)
             ->forBankAccount($bankReconciliation->bank_account_id)
-            ->whereIn('reconciliation_status', ['unreconciled', 'matched'])
+            ->whereIn('reconciliation_status', ['unreconciled', 'matched']);
+
+        if (! $includeOutOfPeriod) {
+            $openTransactionQuery->whereBetween('transaction_date', [$statementStart, $statementEnd]);
+        }
+
+        if ($search !== '') {
+            $term = '%'.$search.'%';
+
+            $openTransactionQuery->where(function ($query) use ($term) {
+                $query->where('reference', 'ilike', $term)
+                    ->orWhere('description', 'ilike', $term)
+                    ->orWhere('external_reference', 'ilike', $term);
+            });
+        }
+
+        $openTransactionTotal = (clone $openTransactionQuery)->count();
+
+        $unmatchedTransactions = $openTransactionQuery
             ->orderBy('transaction_date')
             ->orderBy('id')
+            ->limit(self::OPEN_TRANSACTION_LIMIT)
             ->get()
             ->map(fn (BankTransaction $bankTransaction) => [
                 'id' => $bankTransaction->id,
@@ -101,20 +138,62 @@ class BankReconciliationController extends Controller
             ])
             ->values();
 
-        $candidateLines = JournalEntryLine::where('organization_id', $organization->id)
+        $candidateLineQuery = JournalEntryLine::where('organization_id', $organization->id)
             ->where('account_id', $bankReconciliation->bankAccount->account_id)
-            ->whereHas('journalEntry', fn ($query) => $query->where('status', JournalEntryStatus::Posted->value))
+            ->where('currency_id', $bankReconciliation->currency_id)
+            ->whereHas('journalEntry', function ($query) use ($includeOutOfPeriod, $statementStart, $statementEnd) {
+                $query->where('status', JournalEntryStatus::Posted->value);
+
+                if (! $includeOutOfPeriod) {
+                    $query->whereBetween('entry_date', [$statementStart, $statementEnd]);
+                }
+            });
+
+        if ($lineSearch !== '') {
+            $term = '%'.$lineSearch.'%';
+
+            $candidateLineQuery->where(function ($query) use ($term, $lineSearch) {
+                $query->where('description', 'ilike', $term)
+                    // The line description is optional in the data model, so the
+                    // entry it belongs to is part of what the user can search.
+                    ->orWhereHas('journalEntry', function ($entry) use ($term) {
+                        $entry->where('description', 'ilike', $term)
+                            ->orWhere('reference', 'ilike', $term);
+                    });
+
+                if (ctype_digit($lineSearch)) {
+                    $query->orWhere('journal_entry_id', (int) $lineSearch);
+                }
+            });
+        }
+
+        $candidateLineTotal = (clone $candidateLineQuery)->count();
+
+        $candidateLines = $candidateLineQuery
+            ->with('journalEntry')
             ->orderByDesc('id')
-            ->limit(50)
+            ->limit(self::CANDIDATE_LINE_LIMIT)
             ->get()
             ->map(fn (JournalEntryLine $line) => [
                 'id' => $line->id,
                 'journal_entry_id' => $line->journal_entry_id,
-                'description' => $line->description,
+                'entry_date' => $line->journalEntry?->entry_date?->format('Y-m-d'),
+                'description' => $line->description ?: $line->journalEntry?->description,
                 'debit' => $line->debit,
                 'credit' => $line->credit,
             ])
             ->values();
+
+        // Matches whose bank date falls outside the statement are legitimate
+        // timing differences, but the finalizer must be able to see them.
+        $outOfPeriodMatchCount = ReconciliationMatch::query()
+            ->join('bank_transactions', 'bank_transactions.id', '=', 'reconciliation_matches.bank_transaction_id')
+            ->where('reconciliation_matches.reconciliation_id', $bankReconciliation->id)
+            ->where(function ($query) use ($statementStart, $statementEnd) {
+                $query->where('bank_transactions.transaction_date', '<', $statementStart)
+                    ->orWhere('bank_transactions.transaction_date', '>', $statementEnd);
+            })
+            ->count();
 
         return Inertia::render('BankReconciliations/Show', [
             'reconciliation' => $this->serialize($bankReconciliation, $user),
@@ -138,10 +217,21 @@ class BankReconciliationController extends Controller
                     ] : null,
                     'matched_amount' => $match->matched_amount,
                     'match_type' => $match->match_type,
+                    'out_of_period' => $bankReconciliation->isOutsideStatementPeriod(
+                        $match->bankTransaction?->transaction_date
+                    ),
                 ])
                 ->values(),
             'unmatchedTransactions' => $unmatchedTransactions,
+            'unmatchedTotal' => $openTransactionTotal,
             'candidateJournalLines' => $candidateLines,
+            'candidateLineTotal' => $candidateLineTotal,
+            'outOfPeriodMatchCount' => $outOfPeriodMatchCount,
+            'filters' => [
+                'search' => $search,
+                'lineSearch' => $lineSearch,
+                'includeOutOfPeriod' => $includeOutOfPeriod,
+            ],
             'can' => [
                 'match' => $bankReconciliation->isOpen() && $user->can('update', $bankReconciliation),
                 'finalize' => $bankReconciliation->isOpen() && $user->can('finalize', $bankReconciliation),

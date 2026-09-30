@@ -78,7 +78,7 @@ class MatchBankTransaction
                 ReconciliationMatch::class,
                 $match->id,
                 null,
-                $this->auditValues($match)
+                $this->auditValues($match, $locked->isOutsideStatementPeriod($bankTransaction->transaction_date))
             );
 
             return $match;
@@ -118,29 +118,37 @@ class MatchBankTransaction
     {
         $matched = (string) ReconciliationMatch::where('bank_transaction_id', $bankTransaction->id)->sum('matched_amount');
 
-        return $this->remaining(
-            max((float) $bankTransaction->debit, (float) $bankTransaction->credit),
-            $matched
-        );
+        return $this->remaining($this->largerSide($bankTransaction->debit, $bankTransaction->credit), $matched);
     }
 
     protected function journalLineCapacity(JournalEntryLine $journalEntryLine): string
     {
         $matched = (string) ReconciliationMatch::where('journal_entry_line_id', $journalEntryLine->id)->sum('matched_amount');
 
-        return $this->remaining(
-            max((float) $journalEntryLine->debit, (float) $journalEntryLine->credit),
-            $matched
-        );
+        return $this->remaining($this->largerSide($journalEntryLine->debit, $journalEntryLine->credit), $matched);
+    }
+
+    /**
+     * A row is either a debit or a credit, so the matchable side is whichever
+     * is larger. Compared with bcmath rather than floats: these are
+     * numeric(20,4) columns, and a float round-trip can make a fully consumed
+     * row look like it has a fraction of a unit left.
+     */
+    protected function largerSide(mixed $debit, mixed $credit): string
+    {
+        $debit = (string) $debit;
+        $credit = (string) $credit;
+
+        return bccomp($debit, $credit, 4) >= 0 ? $debit : $credit;
     }
 
     /**
      * Remaining amount that may still be matched on one side of the
      * many-to-many relationship (INV-010 allocation safety, applied to matches).
      */
-    protected function remaining(float $total, string $alreadyMatched): string
+    protected function remaining(string $total, string $alreadyMatched): string
     {
-        $remaining = bcsub(number_format($total, 4, '.', ''), $alreadyMatched, 4);
+        $remaining = bcsub($total, $alreadyMatched, 4);
 
         return bccomp($remaining, '0', 4) < 0 ? '0.0000' : $remaining;
     }
@@ -167,12 +175,12 @@ class MatchBankTransaction
     /**
      * @return array<string, mixed>
      */
-    protected function auditValues(ReconciliationMatch $match): array
+    protected function auditValues(ReconciliationMatch $match, bool $outOfPeriod = false): array
     {
         return $match->only([
             'reconciliation_id', 'bank_transaction_id', 'journal_entry_line_id',
             'matched_amount', 'match_type', 'created_by',
-        ]);
+        ]) + ['out_of_period' => $outOfPeriod];
     }
 
     public function rules(): array

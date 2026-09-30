@@ -17,9 +17,14 @@ class UpdateBankAccount
     public function handle(BankAccount $bankAccount, array $data, User $actor): BankAccount
     {
         return DB::transaction(function () use ($bankAccount, $data, $actor) {
+            // Re-read under a row lock: the audit trail must record the values
+            // this update actually replaced, so two concurrent editors cannot
+            // both diff against the same stale snapshot.
+            $locked = BankAccount::whereKey($bankAccount->id)->lockForUpdate()->firstOrFail();
+
             $account = Account::findOrFail($data['account_id']);
 
-            if ($account->organization_id !== $bankAccount->organization_id) {
+            if ($account->organization_id !== $locked->organization_id) {
                 throw new \RuntimeException('The ledger account must belong to the same organization.');
             }
 
@@ -27,7 +32,7 @@ class UpdateBankAccount
                 throw new \RuntimeException('The ledger account must be an active posting account.');
             }
 
-            $oldValues = $this->auditValues($bankAccount);
+            $oldValues = $this->auditValues($locked);
 
             $protected = app(BankAccountNumberService::class)->protect(
                 $data['account_number'] ?? null
@@ -51,19 +56,19 @@ class UpdateBankAccount
                 $payload['last4'] = $protected['last4'];
             }
 
-            $bankAccount->update($payload);
+            $locked->update($payload);
 
             app(AuditLogService::class)->record(
-                $bankAccount->organization,
+                $locked->organization,
                 $actor->id,
                 'bank-account.updated',
                 BankAccount::class,
-                $bankAccount->id,
+                $locked->id,
                 $oldValues,
-                $this->auditValues($bankAccount->fresh())
+                $this->auditValues($locked->fresh())
             );
 
-            return $bankAccount->fresh();
+            return $locked->fresh();
         });
     }
 

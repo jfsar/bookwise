@@ -411,6 +411,55 @@ class BankAccountTest extends TestCase
             ->assertStatus(404);
     }
 
+    public function test_update_rejects_cross_organization_ledger_account(): void
+    {
+        [$org, $ledger] = $this->bankOrganization();
+        $bankAccount = BankAccount::factory()->create([
+            'organization_id' => $org->id,
+            'account_id' => $ledger->id,
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $otherOrgLedger = Account::factory()->create();
+        $user = User::factory()->create();
+        $this->attachRoleWithPermission($user, $org, 'update-bank-accounts');
+
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        // The update path has the same tenant guard as create; without it a
+        // bank account could be re-pointed at another org's ledger.
+        $this->put("/bank-accounts/{$bankAccount->id}", $this->storePayload($otherOrgLedger->id, $org->base_currency_id))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'The ledger account must belong to the same organization.');
+
+        $this->assertSame($ledger->id, $bankAccount->fresh()->account_id);
+    }
+
+    public function test_update_rejects_non_posting_ledger_account(): void
+    {
+        [$org, $ledger] = $this->bankOrganization();
+        $bankAccount = BankAccount::factory()->create([
+            'organization_id' => $org->id,
+            'account_id' => $ledger->id,
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $header = Account::factory()->create([
+            'organization_id' => $org->id,
+            'is_posting_account' => false,
+        ]);
+        $user = User::factory()->create();
+        $this->attachRoleWithPermission($user, $org, 'update-bank-accounts');
+
+        $this->actingAs($user);
+        $this->confirmPassword();
+
+        $this->put("/bank-accounts/{$bankAccount->id}", $this->storePayload($header->id, $org->base_currency_id))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'The ledger account must be an active posting account.');
+
+        $this->assertSame($ledger->id, $bankAccount->fresh()->account_id);
+    }
+
     public function test_tenant_isolation_for_index(): void
     {
         [$org, $ledger] = $this->bankOrganization();

@@ -133,4 +133,24 @@ class BankReconciliation extends Model
     {
         return bccomp((string) $this->difference, '0', 4) === 0;
     }
+
+    /**
+     * Whether a bank or ledger date falls outside the statement period.
+     *
+     * Timing differences — outstanding cheques, deposits in transit — are the
+     * whole point of a reconciliation, so such a row may still be matched. It
+     * is only recorded (audit trail) and surfaced on the statement, never
+     * rejected. ISO dates compare correctly as strings.
+     */
+    public function isOutsideStatementPeriod(?Carbon $date): bool
+    {
+        if ($date === null) {
+            return false;
+        }
+
+        $iso = $date->format('Y-m-d');
+
+        return $iso < $this->statement_start_date->format('Y-m-d')
+            || $iso > $this->statement_end_date->format('Y-m-d');
+    }
 }

@@ -42,11 +42,7 @@ class ImportBankTransactions
             // §0.26 idempotency: the file checksum is the logical operation key.
             // Retrying a file that already imported successfully returns the
             // original batch instead of creating a new one.
-            $completed = BankImportBatch::forOrganization($organization)
-                ->where('bank_account_id', $bankAccount->id)
-                ->where('file_checksum', $checksum)
-                ->where('status', 'completed')
-                ->first();
+            $completed = $this->completedBatch($organization, $bankAccount, $checksum);
 
             if ($completed) {
                 return $completed;
@@ -95,24 +91,25 @@ class ImportBankTransactions
             foreach ($parsed['rows'] as $row) {
                 $fingerprint = $this->fingerprint($row);
 
-                if (in_array($fingerprint, $fingerprints, true)) {
+                if (array_key_exists($fingerprint, $fingerprints)) {
                     $skipped++;
 
                     continue;
                 }
 
                 try {
-                    DB::transaction(function () use ($bankAccount, $batch, $actor, $row, $fingerprint) {
-                        $this->createTransaction($bankAccount, $batch, $actor, $row, $fingerprint);
+                    DB::transaction(function () use ($bankAccount, $batch, $row, $fingerprint) {
+                        $this->createTransaction($bankAccount, $batch, $row, $fingerprint);
                     });
-                    $fingerprints[] = $fingerprint;
+                    $fingerprints[$fingerprint] = true;
                     $imported++;
                 } catch (QueryException $e) {
                     // PostgreSQL marks the whole transaction aborted after a
-                    // constraint violation. Wrapping each insert in a nested
-                    // transaction (savepoint) lets us roll back to the
-                    // savepoint, recover, and treat the row as a duplicate.
-                    if ((int) $e->errorInfo[0] !== 23505) {
+                    // constraint violation. Rolling back to the savepoint this
+                    // nested transaction took lets the connection recover, so
+                    // the row is treated as a duplicate and the import
+                    // continues. The savepoint is mandatory, not optional.
+                    if ((int) ($e->errorInfo[0] ?? 0) !== 23505) {
                         throw $e;
                     }
 
@@ -120,12 +117,27 @@ class ImportBankTransactions
                 }
             }
 
-            $batch->update([
-                'status' => 'completed',
-                'rows_imported' => $imported,
-                'rows_skipped' => $skipped,
-                'completed_at' => now(),
-            ]);
+            try {
+                DB::transaction(function () use ($batch, $imported, $skipped) {
+                    $batch->update([
+                        'status' => 'completed',
+                        'rows_imported' => $imported,
+                        'rows_skipped' => $skipped,
+                        'completed_at' => now(),
+                    ]);
+                });
+            } catch (QueryException $e) {
+                // Two concurrent uploads of the same file both pass the
+                // completed-batch lookup above, and only one can win the
+                // `uq_import_batch_completed_file` partial unique index. The
+                // loser reports the winner's result instead of erroring, which
+                // is what §0.26 idempotency promises the caller.
+                if ((int) ($e->errorInfo[0] ?? 0) !== 23505) {
+                    throw $e;
+                }
+
+                return $this->completedBatch($organization, $bankAccount, $checksum) ?? $batch->fresh();
+            }
 
             app(AuditLogService::class)->record(
                 $organization,
@@ -141,9 +153,34 @@ class ImportBankTransactions
         });
     }
 
-    private function createTransaction(BankAccount $bankAccount, BankImportBatch $batch, User $actor, array $row, string $fingerprint): void
+    /**
+     * The completed batch that already owns this file, if any. Used for the
+     * idempotent short-circuit and to resolve a lost unique-index race.
+     */
+    private function completedBatch(Organization $organization, BankAccount $bankAccount, string $checksum): ?BankImportBatch
     {
-        $transaction = BankTransaction::create([
+        return BankImportBatch::forOrganization($organization)
+            ->where('bank_account_id', $bankAccount->id)
+            ->where('file_checksum', $checksum)
+            ->where('status', 'completed')
+            ->first();
+    }
+
+    /**
+     * Insert one statement row.
+     *
+     * §0.29 auditing is deliberately done once per FILE, not once per row:
+     * `AuditLogService::record()` opens its own transaction on a second
+     * connection and takes a row lock on the org's audit-chain head, so
+     * per-row auditing turned a 10,000-row CSV into 10,000 cross-connection
+     * commits and could leave thousands of committed audit records for rows
+     * that a later failure rolled back. The batch row is the audit unit for an
+     * import (one file = one logical operation, §0.26) and every imported row
+     * carries `import_batch_id`, so the chain and the data reconcile exactly.
+     */
+    private function createTransaction(BankAccount $bankAccount, BankImportBatch $batch, array $row, string $fingerprint): void
+    {
+        BankTransaction::create([
             'organization_id' => $bankAccount->organization_id,
             'bank_account_id' => $bankAccount->id,
             'transaction_date' => $row['transaction_date'],
@@ -158,16 +195,6 @@ class ImportBankTransactions
             'source' => 'import',
             'reconciliation_status' => 'unreconciled',
         ]);
-
-        app(AuditLogService::class)->record(
-            $bankAccount->organization,
-            $actor->id,
-            'bank-transaction.created',
-            BankTransaction::class,
-            $transaction->id,
-            null,
-            $this->auditValues($transaction)
-        );
     }
 
     /**
@@ -342,16 +369,8 @@ class ImportBankTransactions
     /**
      * @return array<string, mixed>
      */
-    protected function auditValues(BankTransaction|BankImportBatch $model): array
+    protected function auditValues(BankImportBatch $model): array
     {
-        if ($model instanceof BankTransaction) {
-            return $model->only([
-                'bank_account_id', 'transaction_date', 'reference', 'description',
-                'debit', 'credit', 'external_transaction_id', 'import_batch_id',
-                'transaction_hash', 'currency_id', 'source', 'reconciliation_status',
-            ]);
-        }
-
         return $model->only([
             'bank_account_id', 'source', 'file_name', 'file_checksum',
             'status', 'rows_read', 'rows_imported', 'rows_skipped', 'rows_failed',

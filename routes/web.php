@@ -100,7 +100,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/bank-transactions', [BankTransactionController::class, 'index'])->name('bank-transactions.index');
     Route::post('/bank-transactions', [BankTransactionController::class, 'store'])->name('bank-transactions.store');
     Route::put('/bank-transactions/{bankTransaction}', [BankTransactionController::class, 'update'])->name('bank-transactions.update');
-    Route::post('/bank-imports', [BankImportBatchController::class, 'store'])->name('bank-import-batches.store');
+    Route::post('/bank-imports', [BankImportBatchController::class, 'store'])->name('bank-import-batches.store')->middleware('throttle:bank-import');
 
     Route::get('/bank-reconciliations', [BankReconciliationController::class, 'index'])->name('reconciliations.index');
     Route::post('/bank-reconciliations', [BankReconciliationController::class, 'store'])->name('reconciliations.store');

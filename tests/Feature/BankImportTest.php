@@ -177,11 +177,15 @@ class BankImportTest extends TestCase
             'auditable_type' => BankImportBatch::class,
             'auditable_id' => $batch->id,
         ]);
-        $this->assertDatabaseHas('audit_logs', [
-            'organization_id' => $org->id,
+
+        // §0.29: the batch is the audit unit for an import, not the row. The
+        // per-row record is deliberately NOT written, because it opened a
+        // cross-connection transaction per CSV row and could commit audit
+        // entries for rows a later failure rolled back. Line 165 proves the
+        // row is still attributable to the batch.
+        $this->assertDatabaseMissing('audit_logs', [
             'action' => 'bank-transaction.created',
             'auditable_type' => BankTransaction::class,
-            'auditable_id' => $first->id,
         ]);
     }
 
@@ -297,6 +301,29 @@ class BankImportTest extends TestCase
         $this->assertSame(2, $batch->rows_read);
         $this->assertSame(1, $batch->rows_imported);
         $this->assertSame(1, $batch->rows_skipped);
+    }
+
+    public function test_store_is_rate_limited_per_user(): void
+    {
+        [$org, $bankAccount] = $this->bankSetup();
+        $user = User::factory()->create();
+        $this->attachRoleWithPermission($user, $org, 'import-bank-transactions');
+
+        // A statement import parses a whole file and runs one long
+        // transaction, so it is the endpoint most worth bounding.
+        for ($attempt = 1; $attempt <= 6; $attempt++) {
+            $this->actingAs($user)->post('/bank-imports', [
+                'bank_account_id' => $bankAccount->id,
+                'file' => $this->csv(["2026-01-0{$attempt},10.00,,REF-{$attempt},Round {$attempt},EXT-{$attempt}"]),
+            ])->assertRedirect();
+        }
+
+        $this->actingAs($user)->post('/bank-imports', [
+            'bank_account_id' => $bankAccount->id,
+            'file' => $this->csv(['2026-01-09,10.00,,REF-9,Round 9,EXT-9']),
+        ])->assertStatus(429);
+
+        $this->assertDatabaseCount('bank_import_batches', 6);
     }
 
     public function test_transaction_hash_is_unique_per_organization_and_account(): void

@@ -303,6 +303,51 @@ class BankTransactionTest extends TestCase
             ->assertStatus(404);
     }
 
+    public function test_update_rejects_bank_account_from_another_organization(): void
+    {
+        [$org, $bankAccount] = $this->bankSetup();
+        [$foreignOrg, $foreignBank] = $this->bankSetup();
+        $transaction = BankTransaction::factory()->debit(100)->create([
+            'organization_id' => $org->id,
+            'bank_account_id' => $bankAccount->id,
+            'currency_id' => $bankAccount->currency_id,
+        ]);
+        $user = User::factory()->create();
+        $this->attachRoleWithPermission($user, $org, 'update-bank-transactions');
+
+        // The transaction is the caller's, but the target bank account is not:
+        // without this guard the update would re-point it across the tenant line.
+        $this->actingAs($user)->put("/bank-transactions/{$transaction->id}", $this->storePayload($foreignBank->id))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'The bank account must belong to the same organization.');
+
+        $this->assertSame($bankAccount->id, $transaction->fresh()->bank_account_id);
+    }
+
+    public function test_update_rejects_inactive_bank_account(): void
+    {
+        [$org, $bankAccount] = $this->bankSetup();
+        $closedAccount = BankAccount::factory()->create([
+            'organization_id' => $org->id,
+            'account_id' => Account::factory()->create(['organization_id' => $org->id])->id,
+            'status' => 'closed',
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $transaction = BankTransaction::factory()->debit(100)->create([
+            'organization_id' => $org->id,
+            'bank_account_id' => $bankAccount->id,
+            'currency_id' => $bankAccount->currency_id,
+        ]);
+        $user = User::factory()->create();
+        $this->attachRoleWithPermission($user, $org, 'update-bank-transactions');
+
+        $this->actingAs($user)->put("/bank-transactions/{$transaction->id}", $this->storePayload($closedAccount->id))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'The bank account must be active.');
+
+        $this->assertSame($bankAccount->id, $transaction->fresh()->bank_account_id);
+    }
+
     public function test_update_rejects_imported_transaction(): void
     {
         [$org, $bankAccount] = $this->bankSetup();

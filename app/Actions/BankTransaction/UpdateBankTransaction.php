@@ -16,13 +16,18 @@ class UpdateBankTransaction
     public function handle(BankTransaction $bankTransaction, array $data, User $actor): BankTransaction
     {
         return DB::transaction(function () use ($bankTransaction, $data, $actor) {
-            if (! $bankTransaction->isEditable()) {
+            // Re-read under a row lock so the editability check and the audit
+            // diff both see one committed version; without it a reconciliation
+            // finalizing the row concurrently would be silently overwritten.
+            $locked = BankTransaction::whereKey($bankTransaction->id)->lockForUpdate()->firstOrFail();
+
+            if (! $locked->isEditable()) {
                 throw new \RuntimeException('Only unreconciled manual bank transactions can be edited.');
             }
 
             $bankAccount = BankAccount::findOrFail($data['bank_account_id']);
 
-            if ($bankAccount->organization_id !== $bankTransaction->organization_id) {
+            if ($bankAccount->organization_id !== $locked->organization_id) {
                 throw new \RuntimeException('The bank account must belong to the same organization.');
             }
 
@@ -30,9 +35,9 @@ class UpdateBankTransaction
                 throw new \RuntimeException('The bank account must be active.');
             }
 
-            $oldValues = $this->auditValues($bankTransaction);
+            $oldValues = $this->auditValues($locked);
 
-            $bankTransaction->update([
+            $locked->update([
                 'bank_account_id' => $bankAccount->id,
                 'transaction_date' => $data['transaction_date'],
                 'value_date' => $this->nullable($data['value_date'] ?? null),
@@ -44,16 +49,16 @@ class UpdateBankTransaction
             ]);
 
             app(AuditLogService::class)->record(
-                $bankTransaction->organization,
+                $locked->organization,
                 $actor->id,
                 'bank-transaction.updated',
                 BankTransaction::class,
-                $bankTransaction->id,
+                $locked->id,
                 $oldValues,
-                $this->auditValues($bankTransaction->fresh())
+                $this->auditValues($locked->fresh())
             );
 
-            return $bankTransaction->fresh();
+            return $locked->fresh();
         });
     }
 
