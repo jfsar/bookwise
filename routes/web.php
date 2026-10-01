@@ -16,6 +16,7 @@ use App\Http\Controllers\JournalController;
 use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PeriodClosingController;
+use App\Http\Controllers\RecurringJournalController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SessionController;
@@ -52,6 +53,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/journal-entries/{journalEntry}/post', [JournalEntryController::class, 'post'])->name('journal-entries.post');
     Route::post('/journal-entries/{journalEntry}/reverse', [JournalEntryController::class, 'reverse'])->name('journal-entries.reverse');
     Route::post('/journal-entries/{journalEntry}/cancel', [JournalEntryController::class, 'cancel'])->name('journal-entries.cancel');
+
+    Route::get('/recurring-journals', [RecurringJournalController::class, 'index'])->name('recurring-journals.index');
+    Route::post('/recurring-journals', [RecurringJournalController::class, 'store'])->name('recurring-journals.store')->middleware('password.confirm');
+    Route::put('/recurring-journals/{recurringJournal}', [RecurringJournalController::class, 'update'])->name('recurring-journals.update')->middleware('password.confirm');
+    Route::delete('/recurring-journals/{recurringJournal}', [RecurringJournalController::class, 'destroy'])->name('recurring-journals.destroy')->middleware('password.confirm');
+    Route::post('/recurring-journals/{recurringJournal}/pause', [RecurringJournalController::class, 'pause'])->name('recurring-journals.pause');
+    Route::post('/recurring-journals/{recurringJournal}/resume', [RecurringJournalController::class, 'resume'])->name('recurring-journals.resume');
+    Route::post('/recurring-journals/{recurringJournal}/run', [RecurringJournalController::class, 'run'])->name('recurring-journals.run');
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store')->middleware('password.confirm');

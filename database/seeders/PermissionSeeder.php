@@ -78,6 +78,10 @@ class PermissionSeeder extends Seeder
             ['name' => 'view-bank-reconciliations', 'description' => 'View bank reconciliations.'],
             ['name' => 'manage-bank-reconciliations', 'description' => 'Start reconciliations and match bank transactions.'],
             ['name' => 'finalize-bank-reconciliations', 'description' => 'Finalize and reopen bank reconciliations.'],
+            ['name' => 'view-recurring-journals', 'description' => 'View recurring journal definitions and runs.'],
+            ['name' => 'create-recurring-journals', 'description' => 'Create recurring journal definitions.'],
+            ['name' => 'update-recurring-journals', 'description' => 'Update, pause, resume and run recurring journal definitions.'],
+            ['name' => 'delete-recurring-journals', 'description' => 'Delete recurring journal definitions that have never run.'],
         ];
 
         foreach ($permissions as $permission) {
@@ -148,6 +152,9 @@ class PermissionSeeder extends Seeder
                 'view-bank-reconciliations',
                 'manage-bank-reconciliations',
                 'finalize-bank-reconciliations',
+                'view-recurring-journals',
+                'create-recurring-journals',
+                'update-recurring-journals',
             ])->get());
         }
 
@@ -172,6 +179,7 @@ class PermissionSeeder extends Seeder
                 'view-bank-accounts',
                 'view-bank-transactions',
                 'view-bank-reconciliations',
+                'view-recurring-journals',
             ])->get());
         }
 

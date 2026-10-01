@@ -17,12 +17,12 @@ This log tracks SRS requirement execution (see `SRS.md`). Only entries with **St
 | 8 — Reporting Optimization & Derived Performance | not_started |
 | 9 — Reliability & Production Hardening | not_started |
 
-## Phase 7 — Enterprise & Operational Features (§7.16 Recurring Journals) — Status: in_progress
+## Phase 7 — Enterprise & Operational Features (§7.39 Notifications) — Status: next
 
-Scope: recurring journal definitions with automatic post-to-draft generation, effective dating, and execution history.
+Scope: in-app notifications with per-user read state, and event-driven creation from journal, approval, and payment activity.
 
-- **Next:** Define the model, migration, and validation rules for recurring journal definitions and their lines, then the generation action.
+- **Next:** Model, migration, and policy for notifications, then the creation listener/action and the Inertia notification center.
 
 ## Next
 
-Phase 7 item 1 of 4: §7.16 Recurring Journals, then §7.39 Notifications, §7.38 Attachments, and advanced permissions.
+Phase 7 item 2 of 4: §7.39 Notifications, then §7.38 Attachments, and advanced permissions.
