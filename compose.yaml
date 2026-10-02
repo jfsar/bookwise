@@ -1,0 +1,34 @@
+# Local development / testing database.
+#
+# Start it with `composer db:up` (or `docker compose up -d --wait`); the
+# DB_* and TEST_DB_* values in .env match the credentials below. The image is
+# the same postgres:18 used by the test service in .github/workflows/deploy.yml
+# so local runs behave like CI, and neither dev nor test work needs the
+# remote PostgreSQL instance.
+name: bookwise
+
+services:
+    postgres:
+        image: postgres:18
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB:-bookwise}
+            POSTGRES_USER: ${POSTGRES_USER:-bookwise}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bookwise}
+        ports:
+            # Host port follows DB_PORT in .env; the container always listens on 5432.
+            - '${DB_PORT:-5432}:5432'
+        volumes:
+            # PostgreSQL 18 keeps its data under a version-specific subdirectory of
+            # /var/lib/postgresql, so the volume must be mounted at that path.
+            - postgres-data:/var/lib/postgresql
+            # Creates the separate bookwise_test database on first boot.
+            - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-bookwise} -d ${POSTGRES_DB:-bookwise}']
+            interval: 5s
+            timeout: 5s
+            retries: 10
+            start_period: 10s
+
+volumes:
+    postgres-data:
