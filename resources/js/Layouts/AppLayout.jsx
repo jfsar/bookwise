@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Banknote,
     BanknoteArrowDown,
+    Bell,
     BookOpen,
     BookOpenCheck,
     CalendarClock,
@@ -94,7 +95,7 @@ const navigation = [
 ];
 
 export default function AppLayout({ children }) {
-    const { appName, auth, flash } = usePage().props;
+    const { appName, auth, flash, unreadNotificationsCount } = usePage().props;
     const url = usePage().url;
 
     function isActive(href) {
@@ -162,6 +163,19 @@ export default function AppLayout({ children }) {
                                     {auth.user.name}
                                 </span>
                             )}
+
+                            <Link
+                                href="/notifications"
+                                aria-label={`Notifications (${unreadNotificationsCount ?? 0} unread)`}
+                                className="relative rounded-md p-1.5 text-on-surface-muted transition hover:bg-surface-low hover:text-on-surface dark:text-on-surface-muted dark:hover:bg-surface-low dark:hover:text-on-surface"
+                            >
+                                <Bell className="size-4" />
+                                {unreadNotificationsCount > 0 && (
+                                    <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-primary-foreground">
+                                        {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
+                                    </span>
+                                )}
+                            </Link>
 
                             <Link
                                 href="/logout"

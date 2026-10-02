@@ -2,23 +2,16 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-
-class ApprovalDecisionMade extends Notification
+class ApprovalDecisionMade extends OrganizationNotification
 {
-    use Queueable;
-
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct(public string $approvalRequestId, public string $decision, public string $subject) {}
-
-    public function via(object $notifiable): array
+    public function __construct(int $organizationId, public string $approvalRequestId, public string $decision, public string $subject)
     {
-        return ['database'];
+        parent::__construct($organizationId);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(object $notifiable): array
     {
         return [

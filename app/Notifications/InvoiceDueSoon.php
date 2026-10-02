@@ -2,23 +2,16 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-
-class InvoiceDueSoon extends Notification
+class InvoiceDueSoon extends OrganizationNotification
 {
-    use Queueable;
-
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct(public string $invoiceId, public string $invoiceNumber, public string $dueDate) {}
-
-    public function via(object $notifiable): array
+    public function __construct(int $organizationId, public string $invoiceId, public string $invoiceNumber, public string $dueDate)
     {
-        return ['database'];
+        parent::__construct($organizationId);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(object $notifiable): array
     {
         return [

@@ -2,31 +2,20 @@
 
 namespace App\Console\Commands\Notifications;
 
-use App\Enums\VendorBillStatus;
-use App\Models\VendorBill;
-use App\Notifications\VendorBillDue;
+use App\Actions\Notification\SendVendorBillDueReminders;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('notifications:send-vendor-bill-due')]
-#[Description('Send due vendor bill notifications')]
+#[Signature('notifications:send-vendor-bill-due {--days=7 : Days ahead to treat a bill as due soon}')]
+#[Description('Remind staff about vendor bills falling due')]
 class SendVendorBillDueNotifications extends Command
 {
-    public function handle(): int
+    public function handle(SendVendorBillDueReminders $reminders): int
     {
-        $today = now()->toDateString();
-        $soon = now()->addDays(7)->toDateString();
+        $sent = $reminders->handle(null, max(1, (int) $this->option('days')));
 
-        VendorBill::with(['vendor.user', 'organization'])
-            ->whereNotNull('due_date')
-            ->whereIn('status', [VendorBillStatus::Open, VendorBillStatus::PartiallyPaid])
-            ->get()
-            ->each(function ($bill) use ($soon) {
-                if ($bill->due_date->toDateString() <= $soon && $bill->vendor?->user) {
-                    $bill->vendor->user->notify(new VendorBillDue($bill->ulid ?? (string) $bill->id, $bill->bill_number, $bill->due_date->toDateString()));
-                }
-            });
+        $this->info("Sent {$sent} vendor bill reminder(s).");
 
         return Command::SUCCESS;
     }

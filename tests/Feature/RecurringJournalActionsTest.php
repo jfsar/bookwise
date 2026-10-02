@@ -248,7 +248,9 @@ class RecurringJournalActionsTest extends TestCase
 
         $recurringJournal->refresh();
         $this->assertSame(1, $recurringJournal->run_count);
-        $this->assertSame(today()->addMonthNoOverflow()->startOfMonth()->toDateString(), $recurringJournal->next_run_date->toDateString());
+        // The next occurrence is one frequency step after the run date, anchored
+        // to the definition start date, so it is not snapped to the month start.
+        $this->assertSame(today()->addMonthNoOverflow()->toDateString(), $recurringJournal->next_run_date->toDateString());
         $this->assertNotNull($recurringJournal->last_run_at);
         $this->assertDatabaseHas('audit_logs', [
             'organization_id' => $context['organization']->id,

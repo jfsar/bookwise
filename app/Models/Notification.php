@@ -7,9 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-#[Fillable(['type', 'notifiable_type', 'notifiable_id', 'data', 'organization_id', 'read_at'])]
+#[Fillable(['id', 'type', 'notifiable_type', 'notifiable_id', 'data', 'organization_id', 'read_at'])]
 class Notification extends Model
 {
+    /** @var bool */
+    public $incrementing = false;
+
+    /** @var string */
+    protected $keyType = 'string';
+
     protected function casts(): array
     {
         return [

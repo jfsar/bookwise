@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Contracts\OrganizationScopedJob;
 use App\Enums\ReportExportStatus;
 use App\Enums\ReportType;
 use App\Models\ReportExport;
@@ -12,13 +13,22 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Storage;
 
-class ExportReportJob implements ShouldQueue
+class ExportReportJob implements OrganizationScopedJob, ShouldQueue
 {
     use Queueable;
 
     public $timeout = 300;
 
     public function __construct(public int $reportExportId) {}
+
+    /**
+     * The export may already be gone by the time a failure is reported, so the
+     * organization is read defensively rather than assumed.
+     */
+    public function organizationId(): ?int
+    {
+        return ReportExport::find($this->reportExportId)?->organization_id;
+    }
 
     public function handle(): void
     {

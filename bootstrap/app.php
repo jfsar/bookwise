@@ -31,4 +31,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('recurring-journals:generate')
             ->dailyAt('01:00')
             ->withoutOverlapping();
+
+        $schedule->command('notifications:send-invoice-due')
+            ->dailyAt('06:00')
+            ->withoutOverlapping();
+
+        $schedule->command('notifications:send-vendor-bill-due')
+            ->dailyAt('06:15')
+            ->withoutOverlapping();
+
+        $schedule->command('notifications:send-period-closing-reminders')
+            ->dailyAt('06:30')
+            ->withoutOverlapping();
     })->create();

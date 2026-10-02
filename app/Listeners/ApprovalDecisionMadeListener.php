@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\ApprovalDecisionMade;
+use App\Models\Organization;
 use App\Models\User;
 use App\Notifications\ApprovalDecisionMade as ApprovalDecisionMadeNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,17 +16,26 @@ class ApprovalDecisionMadeListener implements ShouldQueue
     public function handle(ApprovalDecisionMade $event): void
     {
         $request = $event->approvalRequest;
-        $decision = $event->decision;
+        $organization = Organization::find($request->organization_id);
 
-        if ($request->requested_by) {
-            $user = User::find($request->requested_by);
-            if ($user) {
-                $user->notify(new ApprovalDecisionMadeNotification(
-                    (string) $request->id,
-                    $decision,
-                    $request->subject ?? 'Approval Request'
-                ));
-            }
+        if (! $organization) {
+            return;
         }
+
+        $requester = User::query()
+            ->whereKey($request->requested_by)
+            ->activeMembersOf($organization)
+            ->first();
+
+        if (! $requester) {
+            return;
+        }
+
+        $requester->notify(new ApprovalDecisionMadeNotification(
+            $organization->id,
+            (string) $request->getKey(),
+            $event->decision,
+            $request->subjectLabel()
+        ));
     }
 }

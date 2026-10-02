@@ -2,23 +2,16 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-
-class PeriodClosingReminder extends Notification
+class PeriodClosingReminder extends OrganizationNotification
 {
-    use Queueable;
-
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct(public string $periodId, public string $periodName, public string $closeDate) {}
-
-    public function via(object $notifiable): array
+    public function __construct(int $organizationId, public string $periodId, public string $periodName, public string $closeDate)
     {
-        return ['database'];
+        parent::__construct($organizationId);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(object $notifiable): array
     {
         return [

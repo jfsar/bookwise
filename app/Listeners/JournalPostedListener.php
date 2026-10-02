@@ -24,10 +24,16 @@ class JournalPostedListener implements ShouldQueue
             ->latest('posted_at')
             ->take(5)
             ->get()
-            ->each(function ($entry) {
-                if ($entry->creator) {
-                    $entry->creator->notify(new JournalEntryPosted($entry->ulid ?? (string) $entry->id, $entry->entry_number));
+            ->each(function (JournalEntry $entry): void {
+                if (! $entry->creator) {
+                    return;
                 }
+
+                $entry->creator->notify(new JournalEntryPosted(
+                    $entry->organization_id,
+                    $entry->ulid ?? (string) $entry->getKey(),
+                    $entry->entry_number
+                ));
             });
     }
 }

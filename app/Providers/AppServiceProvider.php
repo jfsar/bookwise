@@ -2,16 +2,16 @@
 
 namespace App\Providers;
 
-use App\Listeners\UpdateLastLogin;
 use App\Models\Account;
 use App\Models\ReportExport;
+use App\Notifications\Channels\OrganizationDatabaseChannel;
 use App\Observers\AccountObserver;
 use App\Policies\ReportPolicy;
-use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Inertia\ExceptionResponse;
@@ -36,7 +36,7 @@ class AppServiceProvider extends ServiceProvider
 
         Account::observe(AccountObserver::class);
 
-        Event::listen(Login::class, UpdateLastLogin::class);
+        $this->registerNotificationChannels();
 
         $this->registerBankImportRateLimiter();
 
@@ -46,6 +46,18 @@ class AppServiceProvider extends ServiceProvider
                     'status' => $response->statusCode(),
                 ])->withSharedData();
             }
+        });
+    }
+
+    /**
+     * The `organization-database` channel writes notifications.organization_id so
+     * the notification center can enforce tenant scoping on every read and
+     * mark-as-read mutation.
+     */
+    private function registerNotificationChannels(): void
+    {
+        Notification::resolved(function (ChannelManager $manager): void {
+            $manager->extend('organization-database', fn (): OrganizationDatabaseChannel => new OrganizationDatabaseChannel);
         });
     }
 

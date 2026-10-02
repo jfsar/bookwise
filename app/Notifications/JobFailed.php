@@ -2,23 +2,16 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-
-class JobFailed extends Notification
+class JobFailed extends OrganizationNotification
 {
-    use Queueable;
-
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct(public string $jobName, public ?string $exceptionMessage = null) {}
-
-    public function via(object $notifiable): array
+    public function __construct(int $organizationId, public string $jobName, public ?string $exceptionMessage = null)
     {
-        return ['database'];
+        parent::__construct($organizationId);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(object $notifiable): array
     {
         return [

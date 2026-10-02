@@ -2,23 +2,16 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-
-class JournalEntryPosted extends Notification
+class JournalEntryPosted extends OrganizationNotification
 {
-    use Queueable;
-
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct(public string $journalEntryId, public string $entryNumber) {}
-
-    public function via(object $notifiable): array
+    public function __construct(int $organizationId, public string $journalEntryId, public string $entryNumber)
     {
-        return ['database'];
+        parent::__construct($organizationId);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(object $notifiable): array
     {
         return [

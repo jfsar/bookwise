@@ -14,6 +14,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FiscalYearController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\JournalEntryController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PeriodClosingController;
 use App\Http\Controllers\RecurringJournalController;
@@ -122,6 +123,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/period-closing', [PeriodClosingController::class, 'index'])->name('period-closing.index');
     Route::post('/accounting-periods/{accountingPeriod}/close', [PeriodClosingController::class, 'close'])->name('accounting-periods.close')->middleware('password.confirm');
     Route::post('/accounting-periods/{accountingPeriod}/reopen', [PeriodClosingController::class, 'reopen'])->name('accounting-periods.reopen')->middleware('password.confirm');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::patch('/notifications/{notification}', [NotificationController::class, 'update'])->name('notifications.update');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
 
     Route::get('/reports/general-ledger', [ReportController::class, 'generalLedger'])->name('reports.general-ledger');
 

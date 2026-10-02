@@ -19,20 +19,19 @@ This log tracks SRS requirement execution (see `SRS.md`). Only entries with **St
 
 ## Phase 7 — Enterprise & Operational Features (§7.39 Notifications, §7.38 Attachments) — Status: in_progress
 
-### §7.39 Notifications
-- Database notifications migration (already existed; updated schema considerations)
-- Notification model created with proper casts, scopes, helper methods
-- NotificationPolicy created with org-scoped permissions
-- Notification classes created for common events (JournalEntryPosted, ApprovalRequestCreated, ApprovalDecisionMade, InvoiceDueSoon, InvoiceOverdue, VendorBillDue, JobFailed, PeriodClosingReminder)
-- Feature tests added for notification receipt/mark read/unread
+### §7.39 Notifications — Status: implemented
+- `OrganizationNotification` contract + `organization-database` channel persist `notifications.organization_id` for every tenant notification; `User::notifications()` hydrates `App\Models\Notification`.
+- Approval dispatch wired through `ApprovalWorkflowService` (after-commit) to `ApprovalRequestCreated` / `ApprovalDecisionMade`; `JournalPosted` notifies the entry creator.
+- Notification center: `NotificationController` (index, mark read/unread, mark all read), org-scoped `NotificationPolicy`, routes, `unreadNotificationsCount` shared prop, Inertia `Notifications/Index.jsx` page and header bell badge.
+- Scheduled reminders: `SendInvoiceDueReminders`, `SendVendorBillDueReminders`, `SendPeriodClosingReminders` + commands/schedules, idempotent per recipient/subject/run day via `SkipsDuplicateReminders`.
+- Failed background jobs: `OrganizationScopedJob` contract, `ExportReportJob` attribution, `NotifyOrganizationAdminsOfFailedJob` notifies org admins with `manage-settings` and reports unattributable failures.
+- Tests: `NotificationTest`, `NotificationCenterTest`, `NotificationReminderTest`, `ApprovalNotificationTest`, `FailedJobNotificationTest`.
 
 ### §7.38 Attachments
 - Attachment model created with morph relations and scopes
 - AttachmentPolicy created
 - Attachment migration exists in original schema
 
-Next: Continue with event-driven notification dispatch (listeners/actions) for approval/journal/payment events, and implement Inertia notification center UI. Then proceed with attachment upload/download endpoints with tenant authorization and security controls as specified in §7.38/V1.1.
-
 ## Next
 
-Phase 7 continued: Event listeners/actions to dispatch notifications, Inertia notification center (pages/controllers), then Attachment implementation (policies, storage, validation), then advanced permissions refinements.
+Phase 7 continued: attachment upload/download/delete endpoints with tenant authorization and the §0.27 file security controls (private storage, MIME/size validation, malware scan, signed download URLs), then advanced permissions refinements.
