@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\BankImportBatchController;
@@ -59,9 +60,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/recurring-journals', [RecurringJournalController::class, 'store'])->name('recurring-journals.store')->middleware('password.confirm');
     Route::put('/recurring-journals/{recurringJournal}', [RecurringJournalController::class, 'update'])->name('recurring-journals.update')->middleware('password.confirm');
     Route::delete('/recurring-journals/{recurringJournal}', [RecurringJournalController::class, 'destroy'])->name('recurring-journals.destroy')->middleware('password.confirm');
-    Route::post('/recurring-journals/{recurringJournal}/pause', [RecurringJournalController::class, 'pause'])->name('recurring-journals.pause');
-    Route::post('/recurring-journals/{recurringJournal}/resume', [RecurringJournalController::class, 'resume'])->name('recurring-journals.resume');
-    Route::post('/recurring-journals/{recurringJournal}/run', [RecurringJournalController::class, 'run'])->name('recurring-journals.run');
+    Route::post('/recurring-journals/{recurringJournal}/pause', [RecurringJournalController::class, 'pause'])->name('recurring-journals.pause')->middleware('password.confirm');
+    Route::post('/recurring-journals/{recurringJournal}/resume', [RecurringJournalController::class, 'resume'])->name('recurring-journals.resume')->middleware('password.confirm');
+    Route::post('/recurring-journals/{recurringJournal}/run', [RecurringJournalController::class, 'run'])->name('recurring-journals.run')->middleware('password.confirm');
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store')->middleware('password.confirm');
@@ -127,6 +128,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::patch('/notifications/{notification}', [NotificationController::class, 'update'])->name('notifications.update');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+
+    Route::get('/attachments', [AttachmentController::class, 'index'])->name('attachments.index');
+    Route::post('/attachments', [AttachmentController::class, 'store'])->name('attachments.store')->middleware('throttle:attachments');
+    Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'show'])->name('attachments.download');
+    Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
     Route::get('/reports/general-ledger', [ReportController::class, 'generalLedger'])->name('reports.general-ledger');
 

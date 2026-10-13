@@ -82,6 +82,9 @@ class PermissionSeeder extends Seeder
             ['name' => 'create-recurring-journals', 'description' => 'Create recurring journal definitions.'],
             ['name' => 'update-recurring-journals', 'description' => 'Update, pause, resume and run recurring journal definitions.'],
             ['name' => 'delete-recurring-journals', 'description' => 'Delete recurring journal definitions that have never run.'],
+            ['name' => 'view-attachments', 'description' => 'View and download attachments.'],
+            ['name' => 'create-attachments', 'description' => 'Upload attachments to financial records.'],
+            ['name' => 'delete-attachments', 'description' => 'Delete attachments from financial records.'],
         ];
 
         foreach ($permissions as $permission) {
@@ -155,6 +158,8 @@ class PermissionSeeder extends Seeder
                 'view-recurring-journals',
                 'create-recurring-journals',
                 'update-recurring-journals',
+                'view-attachments',
+                'create-attachments',
             ])->get());
         }
 
@@ -180,6 +185,7 @@ class PermissionSeeder extends Seeder
                 'view-bank-transactions',
                 'view-bank-reconciliations',
                 'view-recurring-journals',
+                'view-attachments',
             ])->get());
         }
 

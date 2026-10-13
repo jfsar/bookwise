@@ -109,4 +109,9 @@ class BankTransaction extends Model
     {
         return $this->isManual() && $this->reconciliation_status === 'unreconciled';
     }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
 }

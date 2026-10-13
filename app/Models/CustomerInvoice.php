@@ -143,6 +143,11 @@ class CustomerInvoice extends Model
         return $this->hasMany(CustomerPaymentAllocation::class, 'invoice_id');
     }
 
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
+
     public function scopeForOrganization(Builder $query, Organization $organization): Builder
     {
         return $query->where('organization_id', $organization->id);

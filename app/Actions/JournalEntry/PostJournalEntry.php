@@ -52,7 +52,7 @@ class PostJournalEntry
                 ['status' => 'posted']
             );
 
-            DB::afterCommit(fn () => JournalPosted::dispatch($entry->organization_id));
+            DB::afterCommit(fn () => JournalPosted::dispatch($entry));
 
             return $entry;
         });

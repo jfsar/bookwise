@@ -7,6 +7,7 @@ use App\Actions\Notification\Concerns\SkipsDuplicateReminders;
 use App\Models\AccountingPeriod;
 use App\Models\User;
 use App\Notifications\PeriodClosingReminder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 
 /**
@@ -23,39 +24,43 @@ class SendPeriodClosingReminders
         $today = ($asOf ?? Carbon::now())->copy()->startOfDay();
         $closingBy = $today->copy()->addDays($leadDays);
 
-        $periods = AccountingPeriod::query()
+        $sent = 0;
+        /** @var array<int, Collection<int, User>> $recipientsByOrganization */
+        $recipientsByOrganization = [];
+
+        AccountingPeriod::query()
+            ->with('organization')
             ->open()
             ->whereDate('end_date', '<=', $closingBy->toDateString())
             ->whereDate('end_date', '>=', $today->toDateString())
-            ->orderBy('id')
-            ->get();
+            ->chunkById(200, function ($periods) use (&$sent, &$recipientsByOrganization) {
+                foreach ($periods as $period) {
+                    $organization = $period->organization;
 
-        $sent = 0;
+                    if (! $organization) {
+                        continue;
+                    }
 
-        foreach ($periods as $period) {
-            $organization = $period->organization;
+                    $recipients = $recipientsByOrganization[$organization->id]
+                        ??= User::membersWithPermission($organization, 'close-accounting-period');
+                    $subjectValue = $period->ulid ?? (string) $period->getKey();
 
-            if (! $organization) {
-                continue;
-            }
+                    foreach ($recipients as $user) {
+                        if ($this->alreadyRemindedToday($user, $organization, PeriodClosingReminder::class, 'period_id', $subjectValue)) {
+                            continue;
+                        }
 
-            $subjectValue = $period->ulid ?? (string) $period->getKey();
+                        $user->notify(new PeriodClosingReminder(
+                            $organization->id,
+                            $subjectValue,
+                            $period->name,
+                            $period->end_date->toDateString()
+                        ));
 
-            foreach (User::membersWithPermission($organization, 'close-accounting-period') as $user) {
-                if ($this->alreadyRemindedToday($user, $organization, PeriodClosingReminder::class, 'period_id', $subjectValue)) {
-                    continue;
+                        $sent++;
+                    }
                 }
-
-                $user->notify(new PeriodClosingReminder(
-                    $organization->id,
-                    $subjectValue,
-                    $period->name,
-                    $period->end_date->toDateString()
-                ));
-
-                $sent++;
-            }
-        }
+            });
 
         return $sent;
     }

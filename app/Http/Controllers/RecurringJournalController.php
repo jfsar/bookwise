@@ -234,8 +234,8 @@ class RecurringJournalController extends Controller
             'run_count' => $recurringJournal->run_count,
             'executions_count' => $recurringJournal->executions_count,
             'last_run_at' => $recurringJournal->last_run_at?->format('M d, Y H:i'),
-            'total_debit' => (float) $recurringJournal->totalDebit(),
-            'total_credit' => (float) $recurringJournal->totalCredit(),
+            'total_debit' => (float) $recurringJournal->lines->sum('debit'),
+            'total_credit' => (float) $recurringJournal->lines->sum('credit'),
             'lines' => $recurringJournal->lines->map(fn ($line) => [
                 'line_number' => $line->line_number,
                 'account_id' => $line->account_id,

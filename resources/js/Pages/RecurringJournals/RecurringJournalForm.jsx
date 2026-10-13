@@ -297,7 +297,7 @@ export default function RecurringJournalForm({ open, onClose, recurringJournal, 
                                             </div>
                                         </div>
 
-                                        {data.lines.length > 1 && (
+                                        {data.lines.length > 2 && (
                                             <div className="mt-3 flex justify-end">
                                                 <Button
                                                     type="button"

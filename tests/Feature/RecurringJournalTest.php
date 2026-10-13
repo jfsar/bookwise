@@ -362,15 +362,16 @@ class RecurringJournalTest extends TestCase
         $this->attachRoleWithPermission($context['user'], $context['organization'], 'update-recurring-journals');
         $recurringJournal = $this->definition($context);
 
-        $this->actingAs($context['user'])
-            ->from('/recurring-journals')
+        $this->actingAs($context['user']);
+        $this->confirmPassword();
+
+        $this->from('/recurring-journals')
             ->post("/recurring-journals/{$recurringJournal->id}/pause")
             ->assertRedirect('/recurring-journals');
 
         $this->assertSame(RecurringJournalStatus::Paused, $recurringJournal->fresh()->status);
 
-        $this->actingAs($context['user'])
-            ->from('/recurring-journals')
+        $this->from('/recurring-journals')
             ->post("/recurring-journals/{$recurringJournal->id}/resume")
             ->assertRedirect('/recurring-journals');
 
@@ -383,13 +384,14 @@ class RecurringJournalTest extends TestCase
         $this->attachRoleWithPermission($context['user'], $context['organization'], 'update-recurring-journals');
         $recurringJournal = $this->definition($context);
 
-        $this->actingAs($context['user'])
-            ->from('/recurring-journals')
+        $this->actingAs($context['user']);
+        $this->confirmPassword();
+
+        $this->from('/recurring-journals')
             ->post("/recurring-journals/{$recurringJournal->id}/pause")
             ->assertSessionHas('success');
 
-        $this->actingAs($context['user'])
-            ->from('/recurring-journals')
+        $this->from('/recurring-journals')
             ->post("/recurring-journals/{$recurringJournal->id}/pause")
             ->assertStatus(403);
 
@@ -402,8 +404,10 @@ class RecurringJournalTest extends TestCase
         $this->attachRoleWithPermission($context['user'], $context['organization'], 'update-recurring-journals');
         $recurringJournal = $this->definition($context);
 
-        $this->actingAs($context['user'])
-            ->from('/recurring-journals')
+        $this->actingAs($context['user']);
+        $this->confirmPassword();
+
+        $this->from('/recurring-journals')
             ->post("/recurring-journals/{$recurringJournal->id}/resume")
             ->assertStatus(403);
 
@@ -451,12 +455,11 @@ class RecurringJournalTest extends TestCase
         ]);
         $recurringJournal = $this->definition($context);
 
-        $this->actingAs($context['user'])
-            ->from('/recurring-journals')
-            ->post("/recurring-journals/{$recurringJournal->id}/pause");
-
         $this->actingAs($context['user']);
         $this->confirmPassword();
+
+        $this->from('/recurring-journals')
+            ->post("/recurring-journals/{$recurringJournal->id}/pause");
 
         $this->from('/recurring-journals')
             ->delete("/recurring-journals/{$recurringJournal->id}")
@@ -492,8 +495,10 @@ class RecurringJournalTest extends TestCase
         $this->attachRoleWithPermission($context['user'], $context['organization'], 'view-recurring-journals');
         $recurringJournal = $this->definition($context);
 
-        $this->actingAs($context['user'])
-            ->from('/recurring-journals')
+        $this->actingAs($context['user']);
+        $this->confirmPassword();
+
+        $this->from('/recurring-journals')
             ->post("/recurring-journals/{$recurringJournal->id}/run")
             ->assertStatus(403);
 
@@ -506,8 +511,10 @@ class RecurringJournalTest extends TestCase
         $this->attachRoleWithPermission($context['user'], $context['organization'], 'update-recurring-journals');
         $recurringJournal = $this->definition($context);
 
-        $this->actingAs($context['user'])
-            ->from('/recurring-journals')
+        $this->actingAs($context['user']);
+        $this->confirmPassword();
+
+        $this->from('/recurring-journals')
             ->post("/recurring-journals/{$recurringJournal->id}/run")
             ->assertRedirect('/recurring-journals')
             ->assertSessionHas('success');

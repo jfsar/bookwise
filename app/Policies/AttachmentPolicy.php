@@ -8,35 +8,34 @@ use App\Models\User;
 
 class AttachmentPolicy
 {
-    public function view(User $user, Attachment $attachment, Organization $organization): bool
+    public function viewAny(User $user, Organization $organization): bool
     {
-        if ($attachment->organization_id !== $organization->id) {
-            return false;
-        }
+        return $user->hasPermissionTo('view-attachments', $organization);
+    }
 
-        return true;
+    public function view(User $user, Attachment $attachment): bool
+    {
+        return $this->belongsToOrganization($user, $attachment)
+            && $user->hasPermissionTo('view-attachments', $attachment->organization);
     }
 
     public function create(User $user, Organization $organization): bool
     {
-        return $user->belongsToOrganization($organization);
+        return $user->hasPermissionTo('create-attachments', $organization);
     }
 
-    public function update(User $user, Attachment $attachment, Organization $organization): bool
+    public function delete(User $user, Attachment $attachment): bool
     {
-        if ($attachment->organization_id !== $organization->id) {
-            return false;
-        }
-
-        return $attachment->uploaded_by === $user->id;
+        return $this->belongsToOrganization($user, $attachment)
+            && $user->hasPermissionTo('delete-attachments', $attachment->organization);
     }
 
-    public function delete(User $user, Attachment $attachment, Organization $organization): bool
+    /**
+     * Cross-tenant access is denied regardless of permissions (SRS §0.27,
+     * acceptance criterion 49).
+     */
+    private function belongsToOrganization(User $user, Attachment $attachment): bool
     {
-        if ($attachment->organization_id !== $organization->id) {
-            return false;
-        }
-
-        return $attachment->uploaded_by === $user->id || $user->hasPermissionTo('attachments.delete', $organization);
+        return $user->belongsToOrganization($attachment->organization);
     }
 }

@@ -2,9 +2,7 @@
 
 namespace App\Listeners;
 
-use App\Enums\JournalEntryStatus;
 use App\Events\JournalPosted;
-use App\Models\JournalEntry;
 use App\Notifications\JournalEntryPosted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -15,25 +13,22 @@ class JournalPostedListener implements ShouldQueue
 
     public function handle(JournalPosted $event): void
     {
-        $organizationId = $event->organizationId;
+        $entry = $event->entry;
 
-        JournalEntry::with('creator')
-            ->where('organization_id', $organizationId)
-            ->where('status', JournalEntryStatus::Posted)
-            ->whereNull('reversal_of_id')
-            ->latest('posted_at')
-            ->take(5)
-            ->get()
-            ->each(function (JournalEntry $entry): void {
-                if (! $entry->creator) {
-                    return;
-                }
+        if ($entry->reversal_of_id !== null) {
+            return;
+        }
 
-                $entry->creator->notify(new JournalEntryPosted(
-                    $entry->organization_id,
-                    $entry->ulid ?? (string) $entry->getKey(),
-                    $entry->entry_number
-                ));
-            });
+        $creator = $entry->creator;
+
+        if (! $creator) {
+            return;
+        }
+
+        $creator->notify(new JournalEntryPosted(
+            $entry->organization_id,
+            $entry->ulid ?? (string) $entry->getKey(),
+            $entry->entry_number
+        ));
     }
 }

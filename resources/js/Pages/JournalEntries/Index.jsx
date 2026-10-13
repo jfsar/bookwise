@@ -4,8 +4,10 @@ import { router, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import ConfirmEntryModal from '@/Pages/JournalEntries/ConfirmEntryModal';
 import JournalEntryForm from '@/Pages/JournalEntries/JournalEntryForm';
+import AttachmentPanel from '@/Components/AttachmentPanel';
 import Pagination from '@/Components/Pagination';
 import StatusBadge from '@/Components/StatusBadge';
+import { ATTACHABLE_TYPES } from '@/lib/attachable';
 import { Button } from '@/Components/ui/button';
 import { Card } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
@@ -125,6 +127,7 @@ export default function JournalEntriesIndex() {
                                     <TableCell className="text-sm text-muted-foreground">{entry.accounting_period?.name}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
+                                            <AttachmentPanel attachableType={ATTACHABLE_TYPES.journalEntry} attachableId={entry.id} />
                                             {entry.can.submit && (
                                                 <Button
                                                     size="sm"

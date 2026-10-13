@@ -9,6 +9,7 @@ use App\Models\CustomerInvoice;
 use App\Models\User;
 use App\Notifications\InvoiceDueSoon;
 use App\Notifications\InvoiceOverdue;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 
 /**
@@ -26,41 +27,43 @@ class SendInvoiceDueReminders
         $today = ($asOf ?? Carbon::now())->copy()->startOfDay();
         $dueSoonBy = $today->copy()->addDays($leadDays);
 
-        $invoices = CustomerInvoice::query()
+        $sent = 0;
+        /** @var array<int, Collection<int, User>> $recipientsByOrganization */
+        $recipientsByOrganization = [];
+
+        CustomerInvoice::query()
+            ->with('organization')
             ->whereNotNull('due_date')
             ->whereIn('status', [CustomerInvoiceStatus::Posted, CustomerInvoiceStatus::PartiallyPaid])
             ->whereDate('due_date', '<=', $dueSoonBy->toDateString())
-            ->orderBy('id')
-            ->get();
+            ->chunkById(200, function ($invoices) use (&$sent, &$recipientsByOrganization, $today) {
+                foreach ($invoices as $invoice) {
+                    $organization = $invoice->organization;
 
-        $sent = 0;
+                    if (! $organization) {
+                        continue;
+                    }
 
-        foreach ($invoices as $invoice) {
-            $organization = $invoice->organization;
+                    $recipients = $recipientsByOrganization[$organization->id]
+                        ??= User::membersWithPermission($organization, 'view-invoices');
+                    $overdue = $invoice->due_date->startOfDay()->lt($today);
+                    $subjectValue = $invoice->ulid ?? (string) $invoice->getKey();
 
-            if (! $organization) {
-                continue;
-            }
+                    foreach ($recipients as $user) {
+                        $type = $overdue ? InvoiceOverdue::class : InvoiceDueSoon::class;
 
-            $recipients = User::membersWithPermission($organization, 'view-invoices');
-            $overdue = $invoice->due_date->startOfDay()->lt($today);
+                        if ($this->alreadyRemindedToday($user, $organization, $type, 'invoice_id', $subjectValue)) {
+                            continue;
+                        }
 
-            foreach ($recipients as $user) {
-                $type = $overdue ? InvoiceOverdue::class : InvoiceDueSoon::class;
-                $subjectKey = 'invoice_id';
-                $subjectValue = $invoice->ulid ?? (string) $invoice->getKey();
+                        $user->notify($overdue
+                            ? new InvoiceOverdue($organization->id, $subjectValue, $invoice->invoice_number, $invoice->due_date->toDateString())
+                            : new InvoiceDueSoon($organization->id, $subjectValue, $invoice->invoice_number, $invoice->due_date->toDateString()));
 
-                if ($this->alreadyRemindedToday($user, $organization, $type, $subjectKey, $subjectValue)) {
-                    continue;
+                        $sent++;
+                    }
                 }
-
-                $user->notify($overdue
-                    ? new InvoiceOverdue($organization->id, $subjectValue, $invoice->invoice_number, $invoice->due_date->toDateString())
-                    : new InvoiceDueSoon($organization->id, $subjectValue, $invoice->invoice_number, $invoice->due_date->toDateString()));
-
-                $sent++;
-            }
-        }
+            });
 
         return $sent;
     }

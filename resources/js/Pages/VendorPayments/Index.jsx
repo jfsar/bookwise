@@ -4,9 +4,11 @@ import { router, usePage } from '@inertiajs/react';
 import VendorPaymentForm from '@/Pages/VendorPayments/VendorPaymentForm';
 import VendorPaymentAllocationDialog from '@/Pages/VendorPayments/AllocationDialog';
 import AppLayout from '@/Layouts/AppLayout';
+import AttachmentPanel from '@/Components/AttachmentPanel';
 import ConfirmVoidDialog from '@/Components/ConfirmVoidDialog';
 import Pagination from '@/Components/Pagination';
 import StatusBadge from '@/Components/StatusBadge';
+import { ATTACHABLE_TYPES } from '@/lib/attachable';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent } from '@/Components/ui/card';
 import { Label } from '@/Components/ui/label';
@@ -95,6 +97,7 @@ export default function VendorPaymentsIndex() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
+                                            <AttachmentPanel attachableType={ATTACHABLE_TYPES.vendorPayment} attachableId={payment.id} />
                                             {payment.can?.allocate && (
                                                 <Button size="sm" variant="outline" onClick={() => setAllocatingPayment(payment)}>
                                                     Allocate

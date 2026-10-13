@@ -9,6 +9,6 @@ class InvalidateDashboardCache
 {
     public function handle(JournalPosted $event): void
     {
-        DashboardMetricsService::forgetForOrganization($event->organizationId);
+        DashboardMetricsService::forgetForOrganization($event->entry->organization_id);
     }
 }

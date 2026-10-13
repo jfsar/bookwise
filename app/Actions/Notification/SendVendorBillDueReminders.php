@@ -8,6 +8,7 @@ use App\Enums\VendorBillStatus;
 use App\Models\User;
 use App\Models\VendorBill;
 use App\Notifications\VendorBillDue;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 
 /**
@@ -24,39 +25,43 @@ class SendVendorBillDueReminders
         $today = ($asOf ?? Carbon::now())->copy()->startOfDay();
         $dueSoonBy = $today->copy()->addDays($leadDays);
 
-        $bills = VendorBill::query()
+        $sent = 0;
+        /** @var array<int, Collection<int, User>> $recipientsByOrganization */
+        $recipientsByOrganization = [];
+
+        VendorBill::query()
+            ->with('organization')
             ->whereNotNull('due_date')
             ->whereIn('status', [VendorBillStatus::Posted, VendorBillStatus::PartiallyPaid])
             ->whereDate('due_date', '<=', $dueSoonBy->toDateString())
-            ->orderBy('id')
-            ->get();
+            ->chunkById(200, function ($bills) use (&$sent, &$recipientsByOrganization) {
+                foreach ($bills as $bill) {
+                    $organization = $bill->organization;
 
-        $sent = 0;
+                    if (! $organization) {
+                        continue;
+                    }
 
-        foreach ($bills as $bill) {
-            $organization = $bill->organization;
+                    $recipients = $recipientsByOrganization[$organization->id]
+                        ??= User::membersWithPermission($organization, 'view-bills');
+                    $subjectValue = $bill->ulid ?? (string) $bill->getKey();
 
-            if (! $organization) {
-                continue;
-            }
+                    foreach ($recipients as $user) {
+                        if ($this->alreadyRemindedToday($user, $organization, VendorBillDue::class, 'bill_id', $subjectValue)) {
+                            continue;
+                        }
 
-            $subjectValue = $bill->ulid ?? (string) $bill->getKey();
+                        $user->notify(new VendorBillDue(
+                            $organization->id,
+                            $subjectValue,
+                            $bill->bill_number,
+                            $bill->due_date->toDateString()
+                        ));
 
-            foreach (User::membersWithPermission($organization, 'view-bills') as $user) {
-                if ($this->alreadyRemindedToday($user, $organization, VendorBillDue::class, 'bill_id', $subjectValue)) {
-                    continue;
+                        $sent++;
+                    }
                 }
-
-                $user->notify(new VendorBillDue(
-                    $organization->id,
-                    $subjectValue,
-                    $bill->bill_number,
-                    $bill->due_date->toDateString()
-                ));
-
-                $sent++;
-            }
-        }
+            });
 
         return $sent;
     }

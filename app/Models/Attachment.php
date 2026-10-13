@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Database\Factories\AttachmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -27,6 +29,26 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 ])]
 class Attachment extends Model
 {
+    /** @use HasFactory<AttachmentFactory> */
+    use HasFactory;
+
+    /**
+     * Organization-owned records that may receive attachments (SRS §7.38).
+     *
+     * @return array<int, class-string<Model>>
+     */
+    public static function attachableTypes(): array
+    {
+        return [
+            JournalEntry::class,
+            CustomerInvoice::class,
+            VendorBill::class,
+            CustomerPayment::class,
+            VendorPayment::class,
+            BankTransaction::class,
+        ];
+    }
+
     protected function casts(): array
     {
         return [
@@ -72,5 +94,10 @@ class Attachment extends Model
     public function isPrivate(): bool
     {
         return $this->visibility === 'private';
+    }
+
+    public function isScanClean(): bool
+    {
+        return $this->scan_status === 'clean';
     }
 }

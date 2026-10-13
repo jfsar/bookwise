@@ -3,8 +3,10 @@ import { router, usePage } from '@inertiajs/react';
 
 import BankTransactionForm from '@/Pages/BankTransactions/BankTransactionForm';
 import AppLayout from '@/Layouts/AppLayout';
+import AttachmentPanel from '@/Components/AttachmentPanel';
 import Pagination from '@/Components/Pagination';
 import StatusBadge from '@/Components/StatusBadge';
+import { ATTACHABLE_TYPES } from '@/lib/attachable';
 import { Button } from '@/Components/ui/button';
 import { Card } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
@@ -128,11 +130,14 @@ export default function BankTransactionsIndex() {
                                         </StatusBadge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {tx.can?.update && (
-                                            <Button size="sm" variant="secondary" onClick={() => openEdit(tx)}>
-                                                Edit
-                                            </Button>
-                                        )}
+                                        <div className="flex justify-end gap-2">
+                                            <AttachmentPanel attachableType={ATTACHABLE_TYPES.bankTransaction} attachableId={tx.id} />
+                                            {tx.can?.update && (
+                                                <Button size="sm" variant="secondary" onClick={() => openEdit(tx)}>
+                                                    Edit
+                                                </Button>
+                                            )}
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}

@@ -100,4 +100,9 @@ class BankAccount extends Model
     {
         return $this->status === 'active';
     }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
 }
