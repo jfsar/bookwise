@@ -43,4 +43,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('notifications:send-period-closing-reminders')
             ->dailyAt('06:30')
             ->withoutOverlapping();
+
+        $schedule->command('accounting:rebuild-derived-balances')
+            ->dailyAt('02:00')
+            ->withoutOverlapping();
     })->create();
