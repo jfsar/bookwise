@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Banknote,
     BanknoteArrowDown,
+    Bell,
     BookOpen,
     BookOpenCheck,
     CalendarClock,
@@ -9,10 +10,12 @@ import {
     Contact,
     FileText,
     History,
+    Landmark,
     LayoutDashboard,
     ListChecks,
     Lock,
     NotebookPen,
+    Repeat,
     ScrollText,
     Scale,
     ShieldCheck,
@@ -51,6 +54,7 @@ const navigation = [
             { label: 'Chart of Accounts', href: '/accounts', icon: BookOpen },
             { label: 'Journals', href: '/journals', icon: NotebookPen },
             { label: 'Journal Entries', href: '/journal-entries', icon: FileText },
+            { label: 'Recurring Journals', href: '/recurring-journals', icon: Repeat },
             { label: 'Customers', href: '/customers', icon: Contact },
             { label: 'Invoices', href: '/invoices', icon: Wallet },
             { label: 'Payments', href: '/payments', icon: Banknote },
@@ -59,6 +63,9 @@ const navigation = [
             { label: 'Bills', href: '/bills', icon: FileText },
             { label: 'Vendor Payments', href: '/vendor-payments', icon: Banknote },
             { label: 'Vendor Debit Notes', href: '/vendor-debit-notes', icon: TicketPercent },
+            { label: 'Bank Accounts', href: '/bank-accounts', icon: Landmark },
+            { label: 'Bank Transactions', href: '/bank-transactions', icon: BanknoteArrowDown },
+            { label: 'Reconciliations', href: '/bank-reconciliations', icon: ListChecks },
         ],
     },
     {
@@ -88,7 +95,7 @@ const navigation = [
 ];
 
 export default function AppLayout({ children }) {
-    const { appName, auth, flash } = usePage().props;
+    const { appName, auth, flash, unreadNotificationsCount } = usePage().props;
     const url = usePage().url;
 
     function isActive(href) {
@@ -156,6 +163,19 @@ export default function AppLayout({ children }) {
                                     {auth.user.name}
                                 </span>
                             )}
+
+                            <Link
+                                href="/notifications"
+                                aria-label={`Notifications (${unreadNotificationsCount ?? 0} unread)`}
+                                className="relative rounded-md p-1.5 text-on-surface-muted transition hover:bg-surface-low hover:text-on-surface dark:text-on-surface-muted dark:hover:bg-surface-low dark:hover:text-on-surface"
+                            >
+                                <Bell className="size-4" />
+                                {unreadNotificationsCount > 0 && (
+                                    <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-primary-foreground">
+                                        {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
+                                    </span>
+                                )}
+                            </Link>
 
                             <Link
                                 href="/logout"

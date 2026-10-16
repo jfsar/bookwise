@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
+import AttachmentPanel from '@/Components/AttachmentPanel';
 import ConfirmVoidDialog from '@/Components/ConfirmVoidDialog';
 import Pagination from '@/Components/Pagination';
 import StatusBadge from '@/Components/StatusBadge';
+import { ATTACHABLE_TYPES } from '@/lib/attachable';
 import VendorBillForm from '@/Pages/Bills/VendorBillForm';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent } from '@/Components/ui/card';
@@ -91,6 +93,7 @@ export default function VendorBillsIndex() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
+                                            <AttachmentPanel attachableType={ATTACHABLE_TYPES.bill} attachableId={bill.id} />
                                             {bill.can?.post && (
                                                 <Button size="sm" variant="secondary" onClick={() => router.post(`/bills/${bill.id}/post`)}>
                                                     Post

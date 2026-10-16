@@ -1,7 +1,12 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\BankAccountController;
+use App\Http\Controllers\BankImportBatchController;
+use App\Http\Controllers\BankReconciliationController;
+use App\Http\Controllers\BankTransactionController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerCreditNoteController;
 use App\Http\Controllers\CustomerInvoiceController;
@@ -10,8 +15,10 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FiscalYearController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\JournalEntryController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PeriodClosingController;
+use App\Http\Controllers\RecurringJournalController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SessionController;
@@ -48,6 +55,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/journal-entries/{journalEntry}/post', [JournalEntryController::class, 'post'])->name('journal-entries.post');
     Route::post('/journal-entries/{journalEntry}/reverse', [JournalEntryController::class, 'reverse'])->name('journal-entries.reverse');
     Route::post('/journal-entries/{journalEntry}/cancel', [JournalEntryController::class, 'cancel'])->name('journal-entries.cancel');
+
+    Route::get('/recurring-journals', [RecurringJournalController::class, 'index'])->name('recurring-journals.index');
+    Route::post('/recurring-journals', [RecurringJournalController::class, 'store'])->name('recurring-journals.store')->middleware('password.confirm');
+    Route::put('/recurring-journals/{recurringJournal}', [RecurringJournalController::class, 'update'])->name('recurring-journals.update')->middleware('password.confirm');
+    Route::delete('/recurring-journals/{recurringJournal}', [RecurringJournalController::class, 'destroy'])->name('recurring-journals.destroy')->middleware('password.confirm');
+    Route::post('/recurring-journals/{recurringJournal}/pause', [RecurringJournalController::class, 'pause'])->name('recurring-journals.pause')->middleware('password.confirm');
+    Route::post('/recurring-journals/{recurringJournal}/resume', [RecurringJournalController::class, 'resume'])->name('recurring-journals.resume')->middleware('password.confirm');
+    Route::post('/recurring-journals/{recurringJournal}/run', [RecurringJournalController::class, 'run'])->name('recurring-journals.run')->middleware('password.confirm');
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store')->middleware('password.confirm');
@@ -89,9 +104,35 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/credit-notes/{customerCreditNote}/post', [CustomerCreditNoteController::class, 'post'])->name('credit-notes.post');
     Route::post('/credit-notes/{customerCreditNote}/void', [CustomerCreditNoteController::class, 'void'])->name('credit-notes.void');
 
+    Route::get('/bank-accounts', [BankAccountController::class, 'index'])->name('bank-accounts.index');
+    Route::post('/bank-accounts', [BankAccountController::class, 'store'])->name('bank-accounts.store')->middleware('password.confirm');
+    Route::put('/bank-accounts/{bankAccount}', [BankAccountController::class, 'update'])->name('bank-accounts.update')->middleware('password.confirm');
+
+    Route::get('/bank-transactions', [BankTransactionController::class, 'index'])->name('bank-transactions.index');
+    Route::post('/bank-transactions', [BankTransactionController::class, 'store'])->name('bank-transactions.store');
+    Route::put('/bank-transactions/{bankTransaction}', [BankTransactionController::class, 'update'])->name('bank-transactions.update');
+    Route::post('/bank-imports', [BankImportBatchController::class, 'store'])->name('bank-import-batches.store')->middleware('throttle:bank-import');
+
+    Route::get('/bank-reconciliations', [BankReconciliationController::class, 'index'])->name('reconciliations.index');
+    Route::post('/bank-reconciliations', [BankReconciliationController::class, 'store'])->name('reconciliations.store');
+    Route::get('/bank-reconciliations/{bankReconciliation}', [BankReconciliationController::class, 'show'])->name('reconciliations.show');
+    Route::post('/bank-reconciliations/{bankReconciliation}/matches', [BankReconciliationController::class, 'match'])->name('reconciliations.match');
+    Route::delete('/bank-reconciliations/{bankReconciliation}/matches/{reconciliationMatch}', [BankReconciliationController::class, 'destroyMatch'])->name('reconciliations.matches.destroy');
+    Route::post('/bank-reconciliations/{bankReconciliation}/finalize', [BankReconciliationController::class, 'finalize'])->name('reconciliations.finalize')->middleware('password.confirm');
+    Route::post('/bank-reconciliations/{bankReconciliation}/reopen', [BankReconciliationController::class, 'reopen'])->name('reconciliations.reopen')->middleware('password.confirm');
+
     Route::get('/period-closing', [PeriodClosingController::class, 'index'])->name('period-closing.index');
     Route::post('/accounting-periods/{accountingPeriod}/close', [PeriodClosingController::class, 'close'])->name('accounting-periods.close')->middleware('password.confirm');
     Route::post('/accounting-periods/{accountingPeriod}/reopen', [PeriodClosingController::class, 'reopen'])->name('accounting-periods.reopen')->middleware('password.confirm');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::patch('/notifications/{notification}', [NotificationController::class, 'update'])->name('notifications.update');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+
+    Route::get('/attachments', [AttachmentController::class, 'index'])->name('attachments.index');
+    Route::post('/attachments', [AttachmentController::class, 'store'])->name('attachments.store')->middleware('throttle:attachments');
+    Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'show'])->name('attachments.download');
+    Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
     Route::get('/reports/general-ledger', [ReportController::class, 'generalLedger'])->name('reports.general-ledger');
 

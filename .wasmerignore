@@ -20,3 +20,4 @@ auth.json
 .phpunit.cache/
 storage/logs/*.log
 public/hot
+docker

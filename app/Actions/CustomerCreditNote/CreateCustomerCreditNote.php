@@ -21,6 +21,23 @@ class CreateCustomerCreditNote
 
     public function handle(array $data, Organization $organization, User $creator): CustomerCreditNote
     {
+        try {
+            return $this->persist($data, $organization, $creator);
+        } catch (QueryException $e) {
+            if ($this->isIdempotencyConflict($e, $organization, $data)) {
+                $existing = $this->findByIdempotencyKey($organization, $data['idempotency_key']);
+
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
+            throw $e;
+        }
+    }
+
+    protected function persist(array $data, Organization $organization, User $creator): CustomerCreditNote
+    {
         return DB::transaction(function () use ($data, $organization, $creator) {
             if (! empty($data['idempotency_key'])) {
                 $existing = $this->findByIdempotencyKey($organization, $data['idempotency_key']);
@@ -76,30 +93,22 @@ class CreateCustomerCreditNote
                 throw new \RuntimeException('The credit note total must not exceed the outstanding balance of the invoice.');
             }
 
-            try {
-                $creditNote = CustomerCreditNote::create([
-                    'organization_id' => $organization->id,
-                    'customer_id' => $customer->id,
-                    'invoice_id' => $invoice->id,
-                    'credit_note_number' => $this->generateCreditNoteNumber($organization),
-                    'date' => Carbon::parse($data['date'])->toDateString(),
-                    'currency_id' => $invoice->currency_id,
-                    'exchange_rate' => (float) $invoice->exchange_rate,
-                    'subtotal' => $subtotal,
-                    'tax_amount' => $taxAmount,
-                    'total_amount' => $totalAmount,
-                    'reason' => $data['reason'],
-                    'status' => CustomerCreditNoteStatus::Draft,
-                    'idempotency_key' => $this->nullable($data['idempotency_key'] ?? null),
-                    'created_by' => $creator->id,
-                ]);
-            } catch (QueryException $e) {
-                if ($this->isIdempotencyConflict($e, $organization, $data)) {
-                    return $this->findByIdempotencyKey($organization, $data['idempotency_key']);
-                }
-
-                throw $e;
-            }
+            $creditNote = CustomerCreditNote::create([
+                'organization_id' => $organization->id,
+                'customer_id' => $customer->id,
+                'invoice_id' => $invoice->id,
+                'credit_note_number' => $this->generateCreditNoteNumber($organization),
+                'date' => Carbon::parse($data['date'])->toDateString(),
+                'currency_id' => $invoice->currency_id,
+                'exchange_rate' => (float) $invoice->exchange_rate,
+                'subtotal' => $subtotal,
+                'tax_amount' => $taxAmount,
+                'total_amount' => $totalAmount,
+                'reason' => $data['reason'],
+                'status' => CustomerCreditNoteStatus::Draft,
+                'idempotency_key' => $this->nullable($data['idempotency_key'] ?? null),
+                'created_by' => $creator->id,
+            ]);
 
             app(AuditLogService::class)->record(
                 $organization,

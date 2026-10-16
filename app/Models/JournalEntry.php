@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * @property-read int $id
@@ -152,6 +153,11 @@ class JournalEntry extends Model implements ApprovalSubject
     public function reversalOf(): BelongsTo
     {
         return $this->belongsTo(JournalEntry::class, 'reversal_of_id');
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 
     public function scopeForOrganization(Builder $query, Organization $organization): Builder

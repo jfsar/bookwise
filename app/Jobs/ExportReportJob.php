@@ -2,23 +2,46 @@
 
 namespace App\Jobs;
 
+use App\Contracts\OrganizationScopedJob;
 use App\Enums\ReportExportStatus;
 use App\Enums\ReportType;
+use App\Exceptions\ReportExportFailedException;
 use App\Models\ReportExport;
 use App\Notifications\ReportExportReady;
 use App\Reports\ReportCsvExporter;
 use App\Reports\ReportFactory;
+use App\Services\OperationalMetrics;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
-class ExportReportJob implements ShouldQueue
+class ExportReportJob implements OrganizationScopedJob, ShouldQueue
 {
     use Queueable;
+
+    /**
+     * Transient failures (storage/network) are retried with backoff instead of
+     * permanently failing a user's export on a momentary blip (§0.25). The
+     * schedule is encoded here so behaviour does not depend on the worker flag.
+     */
+    public int $tries = 3;
+
+    /** @var array<int, int> */
+    public array $backoff = [30, 120];
 
     public $timeout = 300;
 
     public function __construct(public int $reportExportId) {}
+
+    /**
+     * The export may already be gone by the time a failure is reported, so the
+     * organization is read defensively rather than assumed.
+     */
+    public function organizationId(): ?int
+    {
+        return ReportExport::find($this->reportExportId)?->organization_id;
+    }
 
     public function handle(): void
     {
@@ -40,10 +63,14 @@ class ExportReportJob implements ShouldQueue
                 $export->filters
             );
 
-            $data = $report->build();
+            $data = app(OperationalMetrics::class)->measure(
+                'report_generation_duration',
+                fn (): array => $report->build(),
+                ['report_type' => $export->report_type->value, 'source' => 'export'],
+            );
 
             if (! $report->hasRecords($data)) {
-                throw new \RuntimeException('There are no records to export for the selected report and filters.');
+                throw new ReportExportFailedException('There are no records to export for the selected report and filters.');
             }
 
             $csv = $this->render($export->report_type, $data);
@@ -63,15 +90,29 @@ class ExportReportJob implements ShouldQueue
             ]);
 
             $export->notify(new ReportExportReady($export));
-        } catch (\Throwable $e) {
+        } catch (ReportExportFailedException $e) {
+            // Permanent: retrying cannot succeed, so fail the export now.
             report($e);
+            $this->markFailed($export, $e);
+        } catch (Throwable $e) {
+            // Transient: rethrow so the queue retries with backoff, and only
+            // record the terminal failure on the final attempt (which also
+            // raises JobFailed so administrators are notified, §7.39).
+            if ($this->attempts() >= $this->tries) {
+                $this->markFailed($export, $e);
+            }
 
-            $export->update([
-                'status' => ReportExportStatus::Failed,
-                'error_message' => $e->getMessage(),
-                'completed_at' => now(),
-            ]);
+            throw $e;
         }
+    }
+
+    private function markFailed(ReportExport $export, Throwable $e): void
+    {
+        $export->update([
+            'status' => ReportExportStatus::Failed,
+            'error_message' => $e->getMessage(),
+            'completed_at' => now(),
+        ]);
     }
 
     protected function render(ReportType $type, array $data): string

@@ -3,8 +3,10 @@ import { router, usePage } from '@inertiajs/react';
 
 import CustomerInvoiceForm from '@/Pages/Invoices/CustomerInvoiceForm';
 import AppLayout from '@/Layouts/AppLayout';
+import AttachmentPanel from '@/Components/AttachmentPanel';
 import Pagination from '@/Components/Pagination';
 import StatusBadge from '@/Components/StatusBadge';
+import { ATTACHABLE_TYPES } from '@/lib/attachable';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent } from '@/Components/ui/card';
 import { Label } from '@/Components/ui/label';
@@ -94,6 +96,7 @@ export default function CustomerInvoicesIndex() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
+                                            <AttachmentPanel attachableType={ATTACHABLE_TYPES.invoice} attachableId={invoice.id} />
                                             {invoice.can?.post && (
                                                 <Button size="sm" variant="secondary" onClick={() => router.post(`/invoices/${invoice.id}/post`)}>
                                                     Post

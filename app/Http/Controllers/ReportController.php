@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Actions\Organization\SwitchOrganization;
 use App\Enums\ReportExportStatus;
 use App\Enums\ReportType;
+use App\Exceptions\IdempotencyConflictException;
+use App\Exceptions\IdempotencyInProgressException;
 use App\Http\Requests\ReportRequest;
 use App\Jobs\ExportReportJob;
 use App\Models\Account;
@@ -14,6 +16,8 @@ use App\Models\Journal;
 use App\Models\Organization;
 use App\Models\ReportExport;
 use App\Reports\ReportFactory;
+use App\Services\IdempotencyService;
+use App\Services\OperationalMetrics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -94,16 +98,37 @@ class ReportController extends Controller
             return back()->with('error', 'There are no records for the selected report and filters.');
         }
 
-        $export = ReportExport::create([
-            'organization_id' => $organization->id,
-            'user_id' => $user->id,
-            'report_type' => $type,
-            'filters' => $request->filters(),
-            'request_hash' => $this->requestHash($type, $request->filters()),
-            'status' => ReportExportStatus::Queued,
-        ]);
+        $requestHash = $this->requestHash($type, $request->filters());
 
-        ExportReportJob::dispatch($export->id);
+        try {
+            app(IdempotencyService::class)->run(
+                $organization,
+                sprintf('report-export:%d:%s:%s', $user->id, $type->value, $requestHash),
+                'report.export.create',
+                [
+                    'report_type' => $type->value,
+                    'filters' => $request->filters(),
+                    'user_id' => $user->id,
+                ],
+                function () use ($organization, $user, $type, $request, $requestHash): ReportExport {
+                    $export = ReportExport::create([
+                        'organization_id' => $organization->id,
+                        'user_id' => $user->id,
+                        'report_type' => $type,
+                        'filters' => $request->filters(),
+                        'request_hash' => $requestHash,
+                        'status' => ReportExportStatus::Queued,
+                    ]);
+
+                    ExportReportJob::dispatch($export->id);
+
+                    return $export;
+                },
+                now()->addMinutes(5),
+            );
+        } catch (IdempotencyConflictException|IdempotencyInProgressException) {
+            return back()->with('error', 'A matching export request has already been submitted.');
+        }
 
         return back()->with('success', 'Report export queued. You will be notified when it is ready.');
     }
@@ -135,7 +160,11 @@ class ReportController extends Controller
         }
 
         $report = ReportFactory::make($type, $organization, $request->filters());
-        $data = $report->build();
+        $data = app(OperationalMetrics::class)->measure(
+            'report_generation_duration',
+            fn (): array => $report->build(),
+            ['report_type' => $type->value, 'source' => 'web'],
+        );
 
         return $this->render($type, $request, $organization, $data, $report->hasRecords($data));
     }

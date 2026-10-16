@@ -16,6 +16,7 @@ use App\Models\Permission;
 use App\Models\ReportExport;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Contracts\Queue\Job;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -275,6 +276,27 @@ class ReportsTest extends TestCase
         $this->assertDatabaseCount('report_exports', 0);
     }
 
+    public function test_repeated_export_submission_is_deduplicated(): void
+    {
+        Queue::fake();
+        $ledger = $this->seedLedger();
+
+        $this->actingAs($ledger['user']);
+        $this->confirmPassword();
+
+        $payload = [
+            'report_type' => 'trial-balance',
+            'account_id' => $ledger['accounts']['cash']->id,
+        ];
+
+        $this->post('/reports/export', $payload)->assertRedirect();
+        $this->post('/reports/export', $payload)->assertRedirect();
+
+        Queue::assertPushed(ExportReportJob::class, 1);
+        $this->assertDatabaseCount('report_exports', 1);
+        $this->assertDatabaseCount('idempotency_keys', 1);
+    }
+
     public function test_export_is_marked_failed_when_the_report_has_no_records(): void
     {
         $org = Organization::factory()->create();
@@ -298,7 +320,7 @@ class ReportsTest extends TestCase
         $this->assertStringContainsString('There are no records to export', $export->error_message);
     }
 
-    public function test_export_is_marked_failed_when_the_file_cannot_be_written(): void
+    public function test_a_transient_export_failure_is_released_for_retry(): void
     {
         $ledger = $this->seedLedger();
 
@@ -320,6 +342,49 @@ class ReportsTest extends TestCase
 
         try {
             (new ExportReportJob($export->id))->handle();
+            $this->fail('A transient failure should be rethrown so the queue retries it.');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('Unable to write the report export file', $e->getMessage());
+        } finally {
+            Storage::set('s3', $originalDisk);
+        }
+
+        $export->refresh();
+
+        $this->assertSame(ReportExportStatus::Generating, $export->status);
+        $this->assertNull($export->file_path);
+    }
+
+    public function test_export_is_marked_failed_after_the_final_retry(): void
+    {
+        $ledger = $this->seedLedger();
+
+        $export = ReportExport::create([
+            'organization_id' => $ledger['org']->id,
+            'user_id' => $ledger['user']->id,
+            'report_type' => 'general-ledger',
+            'filters' => [],
+            'request_hash' => str_repeat('d', 64),
+            'status' => 'queued',
+        ]);
+
+        $job = new ExportReportJob($export->id);
+        $job->job = \Mockery::mock(Job::class)
+            ->shouldReceive('attempts')->andReturn($job->tries)
+            ->getMock();
+
+        $originalDisk = Storage::disk('s3');
+        $adapter = \Mockery::mock(FilesystemAdapter::class)
+            ->makePartial()
+            ->shouldReceive('put')->once()->andReturn(false)
+            ->getMock();
+        Storage::set('s3', $adapter);
+
+        try {
+            $job->handle();
+            $this->fail('The final attempt should let the failure surface.');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('Unable to write the report export file', $e->getMessage());
         } finally {
             Storage::set('s3', $originalDisk);
         }

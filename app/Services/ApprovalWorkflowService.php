@@ -7,6 +7,8 @@ use App\Enums\ApprovalActionType;
 use App\Enums\ApprovalMode;
 use App\Enums\ApprovalRequestStatus;
 use App\Enums\ApprovalRequestStepStatus;
+use App\Events\ApprovalDecisionMade;
+use App\Events\ApprovalRequestCreated;
 use App\Models\ApprovalAction;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRequestStep;
@@ -117,7 +119,11 @@ class ApprovalWorkflowService
                 'step_count' => $steps->count(),
             ]);
 
-            return $request->fresh(['steps']);
+            $request = $request->fresh(['steps']);
+
+            DB::afterCommit(fn () => ApprovalRequestCreated::dispatch($request));
+
+            return $request;
         });
     }
 
@@ -126,7 +132,7 @@ class ApprovalWorkflowService
      */
     public function decide(ApprovalRequest $request, User $actor, ApprovalActionType $decision, ?string $comment = null): ApprovalRequest
     {
-        return DB::transaction(function () use ($request, $actor, $decision, $comment) {
+        $resolved = DB::transaction(function () use ($request, $actor, $decision, $comment) {
             $request = $this->lockRequest($request);
             $request->loadMissing(['steps.workflowStep', 'requestable']);
 
@@ -145,6 +151,10 @@ class ApprovalWorkflowService
 
             return $this->approve($request, $actor, $step, $comment);
         });
+
+        DB::afterCommit(fn () => ApprovalDecisionMade::dispatch($resolved, $decision->value));
+
+        return $resolved;
     }
 
     /**

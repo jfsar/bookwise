@@ -95,4 +95,27 @@ class ApprovalRequest extends Model
     {
         return $query->whereIn('status', [ApprovalRequestStatus::Pending, ApprovalRequestStatus::InReview]);
     }
+
+    /**
+     * A human-readable label for the requestable record, used as the subject in
+     * approval notifications and audit entries.
+     */
+    public function subjectLabel(): string
+    {
+        $subject = $this->requestable;
+
+        if ($subject === null) {
+            return class_basename($this->requestable_type).' #'.$this->requestable_id;
+        }
+
+        foreach (['entry_number', 'invoice_number', 'bill_number', 'name', 'description'] as $attribute) {
+            $value = $subject->getAttribute($attribute);
+
+            if (is_string($value) && $value !== '') {
+                return class_basename($subject::class).' '.$value;
+            }
+        }
+
+        return class_basename($subject::class).' #'.$subject->getKey();
+    }
 }

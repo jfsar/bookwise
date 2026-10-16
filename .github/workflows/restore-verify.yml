@@ -1,0 +1,131 @@
+name: Restore Verification
+
+on:
+  schedule:
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: restore-verify
+  cancel-in-progress: false
+
+jobs:
+  restore-verify:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: laravel
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: bookwise_restore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Validate required secrets
+        env:
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+          AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT: ${{ secrets.AWS_ENDPOINT }}
+        run: |
+          missing=()
+          for secret in BACKUP_ENCRYPTION_KEY AWS_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_ENDPOINT; do
+            value="${!secret}"
+            if [ -z "$value" ]; then
+              missing+=("$secret")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Laravel storage directories
+        run: mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs bootstrap/cache
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, bcmath, intl, pdo, pdo_pgsql
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Download latest offsite backup
+        run: |
+          set -euo pipefail
+          mkdir -p backups
+          latest="$(aws s3 ls "s3://${{ secrets.AWS_BUCKET }}/db-backups/" \
+            --endpoint-url "${{ secrets.AWS_ENDPOINT }}" | awk '{print $4}' \
+            | grep -E '^bookwise-[0-9]{8}T' | sort | tail -n1)"
+          if [ -z "$latest" ]; then
+            echo "::error::No backups found in db-backups/." >&2
+            exit 1
+          fi
+          aws s3 cp "s3://${{ secrets.AWS_BUCKET }}/db-backups/${latest}" "backups/${latest}" \
+            --endpoint-url "${{ secrets.AWS_ENDPOINT }}"
+          echo "Downloaded db-backups/${latest}"
+
+      - name: Decrypt backup
+        run: |
+          set -euo pipefail
+          latest="$(ls backups/bookwise-*.dump.gpg | sort | tail -n1)"
+          gpg --batch --yes --decrypt \
+            --passphrase "${{ secrets.BACKUP_ENCRYPTION_KEY }}" \
+            --output "backups/restore.dump" \
+            "$latest"
+
+      - name: Restore into scratch database
+        run: |
+          set -euo pipefail
+          docker run --rm --network host \
+            -e PGPASSWORD=password \
+            -v "$PWD/backups:/backups" \
+            postgres:18 \
+            pg_restore \
+              --host=127.0.0.1 --port=5432 \
+              --username=laravel --dbname=bookwise_restore \
+              --no-owner --no-privileges --exit-on-error \
+              /backups/restore.dump
+
+      - name: Verify restored database
+        env:
+          APP_ENV: production
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_HOST_DIRECT: 127.0.0.1
+          DB_DATABASE: bookwise_restore
+          DB_USERNAME: laravel
+          DB_PASSWORD: password
+          DB_SSLMODE: disable
+        run: php artisan db:verify-restore

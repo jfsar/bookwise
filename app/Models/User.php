@@ -7,9 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -40,6 +43,24 @@ class User extends Authenticatable implements MustVerifyEmail
     public function ownedOrganizations(): HasMany
     {
         return $this->hasMany(Organization::class, 'created_by');
+    }
+
+    /**
+     * Overrides the Notifiable trait's relation so notifications are hydrated as
+     * App\Models\Notification (organization-scoped) instead of Laravel's
+     * DatabaseNotification.
+     */
+    public function notifications(): MorphMany
+    {
+        return $this->morphMany(Notification::class, 'notifiable')->latest();
+    }
+
+    /**
+     * @return MorphMany<Notification, $this>
+     */
+    public function unreadNotifications(): MorphMany
+    {
+        return $this->notifications()->whereNull('read_at');
     }
 
     public function roles(): BelongsToMany
@@ -80,5 +101,44 @@ class User extends Authenticatable implements MustVerifyEmail
             ->where('role_user.organization_id', $organization->id)
             ->where('slug', $roleSlug)
             ->exists();
+    }
+
+    /**
+     * Scope to active members of the organization.
+     *
+     * Inside whereHas() the pivot is joined as organization_user, so the
+     * membership status has to be constrained on the joined table rather than
+     * through wherePivot().
+     */
+    public function scopeActiveMembersOf(Builder $query, Organization $organization): Builder
+    {
+        return $query->whereHas('organizations', fn (Builder $query) => $query
+            ->where('organizations.id', $organization->id)
+            ->where('organization_user.membership_status', 'active'));
+    }
+
+    /**
+     * Active members of the organization who hold the given permission.
+     */
+    public function scopeWithOrganizationPermission(Builder $query, Organization $organization, string $permissionSlug): Builder
+    {
+        return $query
+            ->activeMembersOf($organization)
+            ->whereHas('roles', fn (Builder $query) => $query
+                ->where('role_user.organization_id', $organization->id)
+                ->whereHas('permissions', fn (Builder $query) => $query->where('name', $permissionSlug)));
+    }
+
+    /**
+     * Active members of the organization who hold the given permission.
+     *
+     * @return Collection<int, User>
+     */
+    public static function membersWithPermission(Organization $organization, string $permissionSlug): Collection
+    {
+        return static::query()
+            ->withOrganizationPermission($organization, $permissionSlug)
+            ->orderBy('name')
+            ->get();
     }
 }

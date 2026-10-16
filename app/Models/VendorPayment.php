@@ -131,6 +131,11 @@ class VendorPayment extends Model
         return $this->hasMany(VendorPaymentAllocation::class, 'payment_id');
     }
 
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
+
     public function totalAllocated(): float
     {
         $total = $this->relationLoaded('allocations')

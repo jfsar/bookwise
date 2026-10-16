@@ -3,6 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Actions\Organization\SwitchOrganization;
+use App\Models\Notification;
+use App\Models\Organization;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -76,6 +79,25 @@ class HandleInertiaRequests extends Middleware
                         'base_currency' => $organization->baseCurrency ? ['code' => $organization->baseCurrency->code] : null,
                     ])->values()->all()
                 : [],
+            'unreadNotificationsCount' => $this->unreadNotificationsCount($user, $currentOrganization),
         ];
+    }
+
+    /**
+     * The bell badge is scoped to the recipient *and* the active organization so
+     * a notification from another tenant can never surface a count here.
+     */
+    private function unreadNotificationsCount(?User $user, ?Organization $organization): int
+    {
+        if (! $user || ! $organization) {
+            return 0;
+        }
+
+        return Notification::query()
+            ->where('notifiable_type', $user->getMorphClass())
+            ->where('notifiable_id', $user->getKey())
+            ->where('organization_id', $organization->id)
+            ->whereNull('read_at')
+            ->count();
     }
 }

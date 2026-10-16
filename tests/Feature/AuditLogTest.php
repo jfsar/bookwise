@@ -150,6 +150,24 @@ class AuditLogTest extends TestCase
         ]);
     }
 
+    public function test_audit_logs_capture_the_request_correlation_and_request_ids(): void
+    {
+        $this->get('/', ['X-Correlation-Id' => 'trace-42', 'X-Request-Id' => 'req-42']);
+
+        $log = app(AuditLogService::class)->record($this->organization, $this->user->id, 'journal-entry.submitted', 'App\\Models\\JournalEntry', 1, [], ['status' => 'submitted']);
+
+        $this->assertSame('trace-42', $log->correlation_id);
+        $this->assertSame('req-42', $log->request_id);
+    }
+
+    public function test_audit_logs_leave_ids_null_outside_a_request(): void
+    {
+        $log = app(AuditLogService::class)->record($this->organization, $this->user->id, 'journal-entry.submitted', 'App\\Models\\JournalEntry', 1, [], ['status' => 'submitted']);
+
+        $this->assertNull($log->correlation_id);
+        $this->assertNull($log->request_id);
+    }
+
     public function test_verify_empty_organization_is_valid(): void
     {
         $result = app(AuditLogService::class)->verify($this->organization);
