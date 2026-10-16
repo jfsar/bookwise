@@ -33,5 +33,5 @@ DESIGN.md
 SRS.md
 .agents
 .ai
-/.opencode/*
-!/.opencode/commands/
+/.opencode/
+docs
