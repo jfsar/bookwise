@@ -24,6 +24,23 @@ class CreateCustomerInvoice
 
     public function handle(array $data, Organization $organization, User $creator): CustomerInvoice
     {
+        try {
+            return $this->persist($data, $organization, $creator);
+        } catch (QueryException $e) {
+            if ($this->isIdempotencyConflict($e, $organization, $data)) {
+                $existing = $this->findByIdempotencyKey($organization, $data['idempotency_key']);
+
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
+            throw $e;
+        }
+    }
+
+    protected function persist(array $data, Organization $organization, User $creator): CustomerInvoice
+    {
         return DB::transaction(function () use ($data, $organization, $creator) {
             if (! empty($data['idempotency_key'])) {
                 $existing = $this->findByIdempotencyKey($organization, $data['idempotency_key']);
@@ -129,34 +146,26 @@ class CreateCustomerInvoice
             $taxAmount = round($taxAmount, 4);
             $totalAmount = round($subtotal - $discountAmount + $taxAmount, 4);
 
-            try {
-                $invoice = CustomerInvoice::create([
-                    'organization_id' => $organization->id,
-                    'customer_id' => $customer->id,
-                    'invoice_number' => $this->generateInvoiceNumber($organization),
-                    'invoice_date' => $invoiceDate->toDateString(),
-                    'due_date' => $data['due_date'],
-                    'currency_id' => $currency->id,
-                    'exchange_rate' => $exchangeRate,
-                    'base_currency_id' => $organization->base_currency_id,
-                    'subtotal' => $subtotal,
-                    'discount_amount' => $discountAmount,
-                    'tax_amount' => $taxAmount,
-                    'total_amount' => $totalAmount,
-                    'paid_amount' => 0,
-                    'balance_due' => $totalAmount,
-                    'status' => CustomerInvoiceStatus::Draft,
-                    'notes' => $this->nullable($data['notes'] ?? null),
-                    'idempotency_key' => $this->nullable($data['idempotency_key'] ?? null),
-                    'created_by' => $creator->id,
-                ]);
-            } catch (QueryException $e) {
-                if ($this->isIdempotencyConflict($e, $organization, $data)) {
-                    return $this->findByIdempotencyKey($organization, $data['idempotency_key']);
-                }
-
-                throw $e;
-            }
+            $invoice = CustomerInvoice::create([
+                'organization_id' => $organization->id,
+                'customer_id' => $customer->id,
+                'invoice_number' => $this->generateInvoiceNumber($organization),
+                'invoice_date' => $invoiceDate->toDateString(),
+                'due_date' => $data['due_date'],
+                'currency_id' => $currency->id,
+                'exchange_rate' => $exchangeRate,
+                'base_currency_id' => $organization->base_currency_id,
+                'subtotal' => $subtotal,
+                'discount_amount' => $discountAmount,
+                'tax_amount' => $taxAmount,
+                'total_amount' => $totalAmount,
+                'paid_amount' => 0,
+                'balance_due' => $totalAmount,
+                'status' => CustomerInvoiceStatus::Draft,
+                'notes' => $this->nullable($data['notes'] ?? null),
+                'idempotency_key' => $this->nullable($data['idempotency_key'] ?? null),
+                'created_by' => $creator->id,
+            ]);
 
             foreach ($lines as $index => $line) {
                 CustomerInvoiceLine::create([...$line, 'invoice_id' => $invoice->id, 'line_number' => $index + 1]);

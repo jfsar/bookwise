@@ -19,7 +19,7 @@ class JournalFactory extends Factory
 
         return [
             'organization_id' => Organization::factory(),
-            'code' => strtoupper(substr(str_replace(' ', '', $name), 0, 5)),
+            'code' => strtoupper(fake()->unique()->lexify('?????')),
             'name' => ucwords($name),
             'description' => fake()->sentence(),
             'type' => 'general',

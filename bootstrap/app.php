@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AssignCorrelationId;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveClientIp;
 use App\Http\Middleware\SecurityHeaders;
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(AssignCorrelationId::class);
         $middleware->append(SecurityHeaders::class);
         $middleware->append(ResolveClientIp::class);
 
@@ -46,5 +48,17 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $schedule->command('accounting:rebuild-derived-balances')
             ->dailyAt('02:00')
+            ->withoutOverlapping();
+
+        $schedule->command('outbox:publish')
+            ->everyMinute()
+            ->withoutOverlapping();
+
+        $schedule->command('queue:prune-failed --hours=720')
+            ->dailyAt('03:30')
+            ->withoutOverlapping();
+
+        $schedule->command('idempotency:expire-stale --prune-days=30')
+            ->dailyAt('04:00')
             ->withoutOverlapping();
     })->create();

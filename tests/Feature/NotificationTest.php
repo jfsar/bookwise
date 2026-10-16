@@ -6,6 +6,8 @@ use App\Actions\JournalEntry\ApproveJournalEntry;
 use App\Actions\JournalEntry\CreateJournalEntry;
 use App\Actions\JournalEntry\PostJournalEntry;
 use App\Actions\JournalEntry\SubmitJournalEntry;
+use App\Events\JournalPosted;
+use App\Listeners\JournalPostedListener;
 use App\Models\Account;
 use App\Models\AccountingPeriod;
 use App\Models\Currency;
@@ -98,6 +100,20 @@ class NotificationTest extends TestCase
 
         $this->assertSame(1, $firstCreator->notifications()->where('type', JournalEntryPosted::class)->count());
         $this->assertSame(1, $secondCreator->notifications()->where('type', JournalEntryPosted::class)->count());
+    }
+
+    public function test_replaying_the_posted_listener_does_not_duplicate_the_notification(): void
+    {
+        $organization = Organization::factory()->create();
+        $creator = User::factory()->create();
+
+        $entry = $this->postEntry($organization, $creator);
+
+        $listener = new JournalPostedListener;
+        $listener->handle(new JournalPosted($entry));
+        $listener->handle(new JournalPosted($entry));
+
+        $this->assertSame(1, $creator->notifications()->where('type', JournalEntryPosted::class)->count());
     }
 
     private function postEntry(Organization $organization, User $creator): JournalEntry

@@ -1,0 +1,91 @@
+name: Database Backup
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+
+    steps:
+      - name: Validate required secrets
+        env:
+          DB_HOST_DIRECT: ${{ secrets.DB_HOST_DIRECT }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+          AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT: ${{ secrets.AWS_ENDPOINT }}
+        run: |
+          missing=()
+          for secret in DB_HOST_DIRECT DB_DATABASE DB_USERNAME DB_PASSWORD BACKUP_ENCRYPTION_KEY AWS_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_ENDPOINT; do
+            value="${!secret}"
+            if [ -z "$value" ]; then
+              missing+=("$secret")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Dump, encrypt, and upload to offsite storage
+        env:
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+          PGSSLMODE: require
+        run: |
+          set -euo pipefail
+          mkdir -p backups
+
+          timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          dump="bookwise-${timestamp}.dump"
+          object="${dump}.gpg"
+
+          # Use a version-matched client (the runner's default pg_dump may be older than the server).
+          docker run --rm -e PGPASSWORD -e PGSSLMODE postgres:18 \
+            pg_dump \
+              --host="${{ secrets.DB_HOST_DIRECT }}" \
+              --port="${{ secrets.DB_PORT || '5432' }}" \
+              --username="${{ secrets.DB_USERNAME }}" \
+              --dbname="${{ secrets.DB_DATABASE }}" \
+              --format=custom --no-owner --no-privileges \
+            > "backups/${dump}"
+
+          # Encrypted before it ever leaves the runner; the key is only in Actions secrets.
+          gpg --batch --yes --symmetric --cipher-algo AES256 \
+            --passphrase "${{ secrets.BACKUP_ENCRYPTION_KEY }}" \
+            --output "backups/${object}" \
+            "backups/${dump}"
+          rm -f "backups/${dump}"
+
+          aws s3 cp "backups/${object}" "s3://${{ secrets.AWS_BUCKET }}/db-backups/${object}" \
+            --endpoint-url "${{ secrets.AWS_ENDPOINT }}"
+          echo "Uploaded db-backups/${object}"
+
+      - name: Prune backups older than 30 days
+        run: |
+          set -euo pipefail
+          cutoff="$(date -u -d '30 days ago' +%Y%m%d)"
+          while read -r object; do
+            [ -z "$object" ] && continue
+            day="$(echo "$object" | sed -E 's/^bookwise-([0-9]{8})T.*/\1/')"
+            if [ "$day" \< "$cutoff" ]; then
+              aws s3 rm "s3://${{ secrets.AWS_BUCKET }}/db-backups/${object}" \
+                --endpoint-url "${{ secrets.AWS_ENDPOINT }}"
+            fi
+          done < <(aws s3 ls "s3://${{ secrets.AWS_BUCKET }}/db-backups/" \
+            --endpoint-url "${{ secrets.AWS_ENDPOINT }}" | awk '{print $4}' \
+            | grep -E '^bookwise-[0-9]{8}T' || true)

@@ -5,7 +5,7 @@
 **Project type:** Personal / portfolio project  
 **Role:** Sole developer and architect (all commits authored by `jfsar` / John Sarmiento)  
 **Timeline:** 2026-09-09 to 2026-10-14 (5 weeks, ongoing; 81 commits on `develop`)  
-**Status:** Core accounting, AR/AP, banking, reporting, approval, audit, notifications, attachments, and recurring journals implemented; durable outbox publication and a shared idempotency store not yet built.
+**Status:** Core accounting, AR/AP, banking, reporting, approval, audit, notifications, attachments, recurring journals, and the reliability infrastructure (durable outbox publication and a shared idempotency store) implemented.
 
 ## At a glance
 
@@ -18,7 +18,7 @@
 | **Object storage** | S3-compatible (Cloudflare R2) for report exports and attachments |
 | **Testing** | PHPUnit 12.5 against a dedicated PostgreSQL database |
 | **Deployment** | Wasmer Edge (WASI) via GitHub Actions |
-| **Scale of code** | 84 migrations, 49 models, 77 Action classes, 28 controllers, 66 React pages, 105 routes, 616 test methods |
+| **Scale of code** | 84 migrations, 50 models, 77 Action classes, 28 controllers, 66 React pages, 105 routes, 675 test methods |
 
 > **Evidence legend used throughout:** ✅ verified by inspecting code/config in the repository · ⚠️ configured or stated but not independently confirmed · ❓ assumption or recommendation.
 
@@ -105,7 +105,7 @@ flowchart TD
 | Banking & reconciliation | `app/Actions/Bank*` | ✅ implemented |
 | Approval, audit, notifications, attachments, recurring journals | `app/Services/ApprovalWorkflowService.php`, `app/Services/AuditLogService.php`, `app/Notifications/**`, `app/Actions/Attachment/**`, `app/Actions/RecurringJournal/**` | ✅ implemented |
 | Derived reporting performance | `app/Services/DerivedBalanceService.php` | ✅ groundwork only |
-| Durable outbox & shared idempotency store | `database/migrations/2026_09_09_055008_create_idempotency_keys_table.php`, `database/migrations/2026_09_09_055009_create_outbox_events_table.php` (tables exist; no publisher/worker class yet) | ⚠️ not started |
+| Durable outbox & shared idempotency store | `app/Services/OutboxService.php`, `app/Services/OutboxPublisher.php`, `app/Jobs/PublishOutboxEventJob.php`, `app/Console/Commands/PublishOutboxEvents.php`, `app/Services/IdempotencyService.php` | ✅ implemented |
 
 ---
 
@@ -301,7 +301,7 @@ These are the concrete, non-obvious problems solved while building the system.
 
 ## 7. Testing and validation
 
-**Test suite.** ✅ There are 45 feature test files and 2 unit test files. `vendor/bin/phpunit --list-tests` enumerates **616 test methods**. Tests run against a dedicated PostgreSQL database (`pgsql_testing`) with `RefreshDatabase`; the suite does not fall back to SQLite because the base migrations use PostgreSQL-only features (jsonb, `ALTER TABLE ... CHECK`, `CREATE EXTENSION`) (`phpunit.xml`, `config/database.php`).
+**Test suite.** ✅ There are 54 feature test files and 2 unit test files. `vendor/bin/phpunit --list-tests` enumerates **675 test methods**. Tests run against a dedicated PostgreSQL database (`pgsql_testing`) with `RefreshDatabase`; the suite does not fall back to SQLite because the base migrations use PostgreSQL-only features (jsonb, `ALTER TABLE ... CHECK`, `CREATE EXTENSION`) (`phpunit.xml`, `config/database.php`).
 
 **What the tests cover** (from the test files under `tests/Feature/**` and `tests/Unit/**`):
 
@@ -336,17 +336,17 @@ These are the concrete, non-obvious problems solved while building the system.
 
 **Verified outcomes**
 
-- ✅ The full AR, AP, Banking, Ledger, Reporting, Tax, Multi-currency, Approval, Audit, Notification, Attachment, and Recurring-journal feature set is implemented, confirmed by the code tree (84 migrations, 49 models, 77 Actions, 105 routes across the route modules in `routes/web.php`).
-- ✅ A 616-method PHPUnit suite exists against a real PostgreSQL engine.
+- ✅ The full AR, AP, Banking, Ledger, Reporting, Tax, Multi-currency, Approval, Audit, Notification, Attachment, and Recurring-journal feature set is implemented, confirmed by the code tree (84 migrations, 50 models, 77 Actions, 105 routes across the route modules in `routes/web.php`).
+- ✅ A 675-method PHPUnit suite exists against a real PostgreSQL engine.
 - ✅ Financial invariants are enforced at multiple layers: domain (posting boundary, allocation guards), application (Actions, Policies), and database (composite tenant-safe FKs, unique/check/exclusion constraints, row locks).
 - ✅ A tamper-evident, per-organization audit hash chain is implemented with a verification routine.
+- ✅ Reliability infrastructure is implemented and tested: a transactional outbox (`app/Services/OutboxService.php`, `app/Services/OutboxPublisher.php`, `app/Jobs/PublishOutboxEventJob.php`, `app/Console/Commands/PublishOutboxEvents.php`) with retry/backoff, a dead-letter re-arm command (`outbox:retry-failed`), and a shared PostgreSQL idempotency store (`app/Services/IdempotencyService.php`) with atomic reservation, result replay, conflict detection, and a `idempotency:expire-stale` sweeper — covered by concurrency and failure-path tests.
 - ✅ A CI pipeline is configured to run the test suite, build the frontend, deploy to Wasmer Edge, migrate, seed, sync secrets, and run a `/up` health check.
 
 **Not verified (stated as intended, not achieved)**
 
 - ⚠️ No evidence of a live, public production deployment. `app.yaml` still contains placeholder `TODO`s (`owner`, `APP_URL` empty), so a real deployed URL cannot be confirmed.
 - ⚠️ No measured performance numbers, no user feedback, no usage or business-impact data. This is a solo portfolio project with no known external users.
-- ⚠️ The durable outbox publisher/worker and a shared idempotency store are **not built**: the `idempotency_keys` and `outbox_events` tables exist (`database/migrations/2026_09_09_055008_create_idempotency_keys_table.php`, `database/migrations/2026_09_09_055009_create_outbox_events_table.php`), but no publisher or store class exists under `app/`, so financial lifecycle events rely on after-commit dispatch only.
 - ⚠️ The derived balance tables (`reporting_fact_tables`, `account_daily_balances`, `ledger_balance_snapshots`) are **verified groundwork only** — reports still read posted journal data directly, by design.
 
 **Concrete engineering outcome.** The most defensible result is that the project demonstrates how to protect financial correctness end to end: balanced-and-approved-only posting in one boundary, reversal-only corrections, tenant-safe composite FKs that actually fail closed, concurrency-safe allocation and period close, and a verifiable audit chain — with tests that target impossible states, not just happy paths.
@@ -365,7 +365,7 @@ These are the concrete, non-obvious problems solved while building the system.
 
 **Known limitations**
 
-- No durable outbox publisher and no shared idempotency store are implemented; allocation and posting rely on transactional guards rather than an idempotency key.
+- The outbox relay and idempotency expiry run on scheduled artisan commands (`outbox:publish`, `idempotency:expire-stale`) rather than a dedicated long-running worker; operational metrics (`queue_failure_total`, `outbox_retry_total`, and the §0.30 set) are emitted as structured `operational_metric` log records rather than to a metrics backend.
 - Advanced FX revaluation and consolidation are out of scope for the current version.
 - The derived reporting tables are not yet consumed by any report or the dashboard.
 - No accessibility or responsive test automation.
@@ -373,7 +373,7 @@ These are the concrete, non-obvious problems solved while building the system.
 
 **Prioritized next steps**
 
-1. **Reliability:** implement the outbox publisher/worker and a shared idempotency store, then write concurrency tests for retried events and imports.
+1. **Reliability operations:** run the outbox relay as a dedicated long-running worker, forward the structured `operational_metric` logs to a real metrics/alerting backend, and add load/soak tests for the relay and idempotency store under sustained retry pressure.
 2. **Performance evidence:** add benchmark tests for the p50/p95/p99 targets and an `EXPLAIN ANALYZE`-backed index review on the largest queries.
 3. **Production hardening:** replace `app.yaml` placeholders, confirm a green CI run, and validate the health check against a real deployment.
 4. **Accessibility:** add automated a11y checks (e.g. axe) for core screens.
@@ -397,9 +397,9 @@ These are the concrete, non-obvious problems solved while building the system.
 | Bank reconciliation N:M | `app/Actions/BankReconciliation/MatchBankTransaction.php`, `app/Http/Controllers/BankReconciliationController.php` |
 | Security headers & client IP | `app/Http/Middleware/SecurityHeaders.php`, `app/Http/Middleware/ResolveClientIp.php` |
 | Tenant-safe FKs & schema traps | `database/migrations/**`, `config/database.php` |
-| Outbox & idempotency tables (no publisher) | `database/migrations/2026_09_09_055008_create_idempotency_keys_table.php`, `database/migrations/2026_09_09_055009_create_outbox_events_table.php` |
+| Outbox & shared idempotency store | `app/Services/OutboxPublisher.php`, `app/Services/IdempotencyService.php`, `app/Console/Commands/PublishOutboxEvents.php`, `app/Console/Commands/RetryFailedOutboxEvents.php`, `app/Console/Commands/ExpireStaleIdempotencyKeys.php` |
 | Deployment pipeline | `.github/workflows/deploy.yml`, `app.yaml` |
-| Test count (616) | `vendor/bin/phpunit --list-tests` |
+| Test count (675) | `vendor/bin/phpunit --list-tests` |
 | Test database (PostgreSQL only) | `phpunit.xml`, `config/database.php` |
 
 *Prepared from repository inspection on 2026-10-14. Claims are separated into verified, configured-but-unconfirmed, and assumptions as marked above.*

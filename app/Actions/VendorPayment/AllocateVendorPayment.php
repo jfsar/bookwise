@@ -12,6 +12,7 @@ use App\Models\VendorDebitNote;
 use App\Models\VendorPayment;
 use App\Models\VendorPaymentAllocation;
 use App\Services\AuditLogService;
+use App\Services\OperationalMetrics;
 use Illuminate\Support\Facades\DB;
 
 class AllocateVendorPayment
@@ -42,6 +43,7 @@ class AllocateVendorPayment
             $requested = round(array_sum($merged), 4);
 
             if ($requested > $payment->remainingAllocatable()) {
+                app(OperationalMetrics::class)->increment('payment_allocation_conflict_total', ['resource' => 'payment']);
                 throw new \RuntimeException("Payment {$payment->payment_number} cannot be allocated beyond its available amount.");
             }
 
@@ -89,6 +91,7 @@ class AllocateVendorPayment
                 $available = round((float) $bill->balance_due - (float) ($pendingAllocatedByBill[$billId] ?? 0) - (float) ($debitedByBill[$billId] ?? 0), 4);
 
                 if ($amount > $available) {
+                    app(OperationalMetrics::class)->increment('payment_allocation_conflict_total', ['resource' => 'bill']);
                     throw new \RuntimeException("Bill {$bill->bill_number} cannot be allocated beyond its outstanding balance.");
                 }
             }

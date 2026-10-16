@@ -9,6 +9,7 @@ use App\Models\BankTransaction;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\OperationalMetrics;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
@@ -115,6 +116,12 @@ class ImportBankTransactions
 
                     $skipped++;
                 }
+            }
+
+            if ($skipped > 0) {
+                app(OperationalMetrics::class)->increment('bank_import_duplicate_total', [
+                    'organization_id' => $organization->id,
+                ], $skipped);
             }
 
             try {

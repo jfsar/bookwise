@@ -10,6 +10,7 @@ use App\Models\CustomerPayment;
 use App\Models\CustomerPaymentAllocation;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\OperationalMetrics;
 use Illuminate\Support\Facades\DB;
 
 class AllocateCustomerPayment
@@ -40,6 +41,7 @@ class AllocateCustomerPayment
             $requested = round(array_sum($merged), 4);
 
             if ($requested > $payment->remainingAllocatable()) {
+                app(OperationalMetrics::class)->increment('payment_allocation_conflict_total', ['resource' => 'payment']);
                 throw new \RuntimeException("Payment {$payment->payment_number} cannot be allocated beyond its available amount.");
             }
 
@@ -79,6 +81,7 @@ class AllocateCustomerPayment
                 $available = round((float) $invoice->balance_due - (float) ($pendingAllocatedByInvoice[$invoiceId] ?? 0), 4);
 
                 if ($amount > $available) {
+                    app(OperationalMetrics::class)->increment('payment_allocation_conflict_total', ['resource' => 'invoice']);
                     throw new \RuntimeException("Invoice {$invoice->invoice_number} cannot be allocated beyond its outstanding balance.");
                 }
             }

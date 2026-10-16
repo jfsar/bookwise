@@ -24,6 +24,23 @@ class CreateVendorBill
 
     public function handle(array $data, Organization $organization, User $creator): VendorBill
     {
+        try {
+            return $this->persist($data, $organization, $creator);
+        } catch (QueryException $e) {
+            if ($this->isIdempotencyConflict($e, $organization, $data)) {
+                $existing = $this->findByIdempotencyKey($organization, $data['idempotency_key']);
+
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
+            throw $e;
+        }
+    }
+
+    protected function persist(array $data, Organization $organization, User $creator): VendorBill
+    {
         return DB::transaction(function () use ($data, $organization, $creator) {
             if (! empty($data['idempotency_key'])) {
                 $existing = $this->findByIdempotencyKey($organization, $data['idempotency_key']);
@@ -134,35 +151,27 @@ class CreateVendorBill
             $taxAmount = round($taxAmount, 4);
             $totalAmount = round($subtotal - $discountAmount + $taxAmount, 4);
 
-            try {
-                $bill = VendorBill::create([
-                    'organization_id' => $organization->id,
-                    'vendor_id' => $vendor->id,
-                    'bill_number' => $this->generateBillNumber($organization),
-                    'vendor_reference' => $this->nullable($data['vendor_reference'] ?? null),
-                    'bill_date' => $billDate->toDateString(),
-                    'due_date' => $data['due_date'],
-                    'currency_id' => $currency->id,
-                    'exchange_rate' => $exchangeRate,
-                    'base_currency_id' => $organization->base_currency_id,
-                    'subtotal' => $subtotal,
-                    'discount_amount' => $discountAmount,
-                    'tax_amount' => $taxAmount,
-                    'total_amount' => $totalAmount,
-                    'paid_amount' => 0,
-                    'balance_due' => $totalAmount,
-                    'status' => VendorBillStatus::Draft,
-                    'notes' => $this->nullable($data['notes'] ?? null),
-                    'idempotency_key' => $this->nullable($data['idempotency_key'] ?? null),
-                    'created_by' => $creator->id,
-                ]);
-            } catch (QueryException $e) {
-                if ($this->isIdempotencyConflict($e, $organization, $data)) {
-                    return $this->findByIdempotencyKey($organization, $data['idempotency_key']);
-                }
-
-                throw $e;
-            }
+            $bill = VendorBill::create([
+                'organization_id' => $organization->id,
+                'vendor_id' => $vendor->id,
+                'bill_number' => $this->generateBillNumber($organization),
+                'vendor_reference' => $this->nullable($data['vendor_reference'] ?? null),
+                'bill_date' => $billDate->toDateString(),
+                'due_date' => $data['due_date'],
+                'currency_id' => $currency->id,
+                'exchange_rate' => $exchangeRate,
+                'base_currency_id' => $organization->base_currency_id,
+                'subtotal' => $subtotal,
+                'discount_amount' => $discountAmount,
+                'tax_amount' => $taxAmount,
+                'total_amount' => $totalAmount,
+                'paid_amount' => 0,
+                'balance_due' => $totalAmount,
+                'status' => VendorBillStatus::Draft,
+                'notes' => $this->nullable($data['notes'] ?? null),
+                'idempotency_key' => $this->nullable($data['idempotency_key'] ?? null),
+                'created_by' => $creator->id,
+            ]);
 
             foreach ($lines as $index => $line) {
                 VendorBillLine::create([...$line, 'bill_id' => $bill->id, 'line_number' => $index + 1]);

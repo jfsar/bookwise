@@ -11,7 +11,10 @@ use App\Notifications\JobFailed;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Monolog\Handler\TestHandler;
+use Monolog\LogRecord;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -61,6 +64,36 @@ class FailedJobNotificationTest extends TestCase
         $this->assertNull($notification->read_at);
         $this->assertSame('FailingTenantJob', $notification->data['job_name']);
         $this->assertSame('Export failed', $notification->data['exception_message']);
+    }
+
+    public function test_failed_job_emits_a_structured_operational_log(): void
+    {
+        $handler = new TestHandler;
+        Log::getLogger()->pushHandler($handler);
+
+        $organization = Organization::factory()->create();
+
+        $this->runFailingJob($organization->id);
+
+        $this->assertTrue($handler->hasErrorThatContains('queue.job_failed'));
+    }
+
+    public function test_failed_job_emits_a_queue_failure_metric(): void
+    {
+        $handler = new TestHandler;
+        Log::getLogger()->pushHandler($handler);
+
+        $organization = Organization::factory()->create();
+
+        $this->runFailingJob($organization->id);
+
+        $metric = collect($handler->getRecords())
+            ->first(fn (LogRecord $record): bool => ($record->context['metric'] ?? null) === 'queue_failure_total');
+
+        $this->assertNotNull($metric);
+        $this->assertSame(1, $metric->context['value']);
+        $this->assertSame('FailingTenantJob', $metric->context['tags']['job']);
+        $this->assertSame($organization->id, $metric->context['tags']['organization_id']);
     }
 
     public function test_failed_job_for_a_missing_organization_is_not_broadcast(): void

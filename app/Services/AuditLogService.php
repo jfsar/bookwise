@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AuditLog;
 use App\Models\Organization;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 
 class AuditLogService
@@ -73,7 +74,8 @@ class AuditLogService
                 'new_values' => $newValues,
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent(),
-                'request_id' => request()->header('X-Request-Id'),
+                'request_id' => Context::get('request_id'),
+                'correlation_id' => Context::get('correlation_id'),
                 'sequence_no' => $sequenceNo,
                 'previous_hash' => $previousHash,
                 'record_hash' => $recordHash,

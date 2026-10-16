@@ -6,8 +6,10 @@ use App\Contracts\OrganizationScopedJob;
 use App\Models\Organization;
 use App\Models\User;
 use App\Notifications\JobFailed;
+use App\Services\OperationalMetrics;
 use Illuminate\Contracts\Queue\Job as QueueJob;
 use Illuminate\Queue\Events\JobFailed as JobFailedEvent;
+use Illuminate\Support\Facades\Log;
 
 /**
  * §7.39 requires a notification when a background job fails. A failed job is
@@ -21,6 +23,18 @@ class NotifyOrganizationAdminsOfFailedJob
     {
         $name = $event->job->resolveName();
         $organizationId = $this->organizationId($event->job);
+
+        // Structured operational signal for the §0.30 queue_failure_total metric.
+        Log::error('queue.job_failed', [
+            'job' => $name,
+            'organization_id' => $organizationId,
+            'exception' => $this->summarize($event->exception),
+        ]);
+
+        app(OperationalMetrics::class)->increment('queue_failure_total', [
+            'job' => class_basename($name),
+            'organization_id' => $organizationId,
+        ]);
 
         if (! $organizationId) {
             report(new \RuntimeException("Queued job [{$name}] failed without a resolvable organization."));

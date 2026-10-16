@@ -21,6 +21,23 @@ class CreateCustomerPayment
 
     public function handle(array $data, Organization $organization, User $creator): CustomerPayment
     {
+        try {
+            return $this->persist($data, $organization, $creator);
+        } catch (QueryException $e) {
+            if ($this->isIdempotencyConflict($e, $organization, $data)) {
+                $existing = $this->findByIdempotencyKey($organization, $data['idempotency_key']);
+
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
+            throw $e;
+        }
+    }
+
+    protected function persist(array $data, Organization $organization, User $creator): CustomerPayment
+    {
         return DB::transaction(function () use ($data, $organization, $creator) {
             if (! empty($data['idempotency_key'])) {
                 $existing = $this->findByIdempotencyKey($organization, $data['idempotency_key']);
@@ -59,31 +76,23 @@ class CreateCustomerPayment
                 throw new \RuntimeException('The cash account must be an active posting account.');
             }
 
-            try {
-                $payment = CustomerPayment::create([
-                    'organization_id' => $organization->id,
-                    'customer_id' => $customer->id,
-                    'payment_number' => $this->generatePaymentNumber($organization),
-                    'payment_date' => Carbon::parse($data['payment_date'])->toDateString(),
-                    'currency_id' => $currency->id,
-                    'exchange_rate' => $exchangeRate,
-                    'base_currency_id' => $organization->base_currency_id,
-                    'amount' => round((float) $data['amount'], 4),
-                    'payment_method' => $data['payment_method'],
-                    'cash_account_id' => $cashAccount->id,
-                    'reference' => $this->nullable($data['reference'] ?? null),
-                    'status' => CustomerPaymentStatus::Draft,
-                    'notes' => $this->nullable($data['notes'] ?? null),
-                    'idempotency_key' => $this->nullable($data['idempotency_key'] ?? null),
-                    'created_by' => $creator->id,
-                ]);
-            } catch (QueryException $e) {
-                if ($this->isIdempotencyConflict($e, $organization, $data)) {
-                    return $this->findByIdempotencyKey($organization, $data['idempotency_key']);
-                }
-
-                throw $e;
-            }
+            $payment = CustomerPayment::create([
+                'organization_id' => $organization->id,
+                'customer_id' => $customer->id,
+                'payment_number' => $this->generatePaymentNumber($organization),
+                'payment_date' => Carbon::parse($data['payment_date'])->toDateString(),
+                'currency_id' => $currency->id,
+                'exchange_rate' => $exchangeRate,
+                'base_currency_id' => $organization->base_currency_id,
+                'amount' => round((float) $data['amount'], 4),
+                'payment_method' => $data['payment_method'],
+                'cash_account_id' => $cashAccount->id,
+                'reference' => $this->nullable($data['reference'] ?? null),
+                'status' => CustomerPaymentStatus::Draft,
+                'notes' => $this->nullable($data['notes'] ?? null),
+                'idempotency_key' => $this->nullable($data['idempotency_key'] ?? null),
+                'created_by' => $creator->id,
+            ]);
 
             app(AuditLogService::class)->record(
                 $organization,
