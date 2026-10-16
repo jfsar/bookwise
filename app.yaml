@@ -77,9 +77,9 @@ env:
   MAIL_HOST: sandbox.smtp.mailtrap.io # TODO: swap for a production mail host if not staying on Mailtrap sandbox
   MAIL_PORT: "2525"
   MAIL_FROM_ADDRESS: book_wise@example.com # TODO: replace with real sender address
-  MAIL_FROM_NAME: BookWise
+  MAIL_FROM_NAME: Dualedge
 
   AWS_DEFAULT_REGION: auto
   AWS_USE_PATH_STYLE_ENDPOINT: "true"
 
-  VITE_APP_NAME: BookWise
+  VITE_APP_NAME: DualEdge
