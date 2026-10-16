@@ -1,4 +1,4 @@
-# BookWise Accounting System
+# Dualedge Accounting System
 
 > A production-style, multi-tenant Laravel accounting platform built around a single double-entry general ledger as the source of financial truth.
 
@@ -76,7 +76,7 @@ The system's scope is defined by its implemented modules (`routes/web.php`) and 
 
 ## 3. Solution overview
 
-BookWise is a **modular monolith** (explicitly not microservices) organized by finance domain. Business operations live in single-purpose **Action classes**; controllers only orchestrate HTTP. Every posted financial fact flows through one posting boundary, and all reports read posted journal lines.
+DualEdge is a **modular monolith** (explicitly not microservices) organized by finance domain. Business operations live in single-purpose **Action classes**; controllers only orchestrate HTTP. Every posted financial fact flows through one posting boundary, and all reports read posted journal lines.
 
 ```mermaid
 flowchart TD

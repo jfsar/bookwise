@@ -8,7 +8,7 @@
 
 kind: wasmer.io/App.v0
 owner: jfsar # TODO: replace with your Wasmer namespace/username
-name: bookwise
+name: dualedge
 package: . # TODO: match owner above
 debug: false
 
@@ -29,7 +29,7 @@ jobs:
         timeout: 10m
 
 env:
-  APP_NAME: BookWise
+  APP_NAME: Dualedge
   APP_ENV: production
   APP_DEBUG: "false"
   APP_URL: "" # TODO: replace with real deployed URL
